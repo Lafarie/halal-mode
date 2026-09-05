@@ -1,0 +1,541 @@
+/* Halal Mode Styles */
+
+/* 1. Zero-Visibility Scroll Pre-Shield for Unverified Videos & Upcoming Reels */
+/* Prevents any video frame from flashing while scrolling until verified safe */
+html.halal-shield-mode video:not([data-halal-pre-scanned="safe"]):not([data-halal-user-verified="true"]),
+body.halal-shield-mode video:not([data-halal-pre-scanned="safe"]):not([data-halal-user-verified="true"]),
+video[data-halal-shield="true"],
+video.halal-shield-active {
+  filter: blur(80px) brightness(0.01) !important;
+  -webkit-filter: blur(80px) brightness(0.01) !important;
+  opacity: 0 !important; /* 0% opacity: completely invisible while scrolling & pre-scanning */
+  pointer-events: none !important;
+  transform: scale(1.08) !important;
+  transition: opacity 0.12s ease-out !important;
+}
+
+/* 2. When verified safe or unblurred by user, smoothly fade in */
+html.halal-active video[data-halal-pre-scanned="safe"],
+html.halal-active video[data-halal-user-verified="true"],
+body.halal-active video[data-halal-pre-scanned="safe"],
+body.halal-active video[data-halal-user-verified="true"] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+/* 3. 100% Impenetrable Video Blur for Confirmed / Blurred Reels */
+video[data-halal-blurred="true"],
+[data-halal-blurred="true"] video,
+video.halal-blurred {
+  filter: blur(80px) brightness(0.01) !important;
+  -webkit-filter: blur(80px) brightness(0.01) !important;
+  opacity: 0.01 !important;
+  pointer-events: none !important;
+  transform: scale(1.08) !important;
+  transition: filter 0.15s ease-out, opacity 0.15s ease-out !important;
+}
+
+/* 4. Hide cover / poster images and thumbnails inside unverified, blurred, or removed reel cards */
+html.halal-shield-mode [data-halal-card-unverified="true"] img,
+html.halal-shield-mode [data-halal-card-unverified="true"] [style*="background-image"],
+body.halal-shield-mode [data-halal-card-unverified="true"] img,
+body.halal-shield-mode [data-halal-card-unverified="true"] [style*="background-image"],
+[data-halal-blurred="true"] img,
+[data-halal-card-blurred="true"] img,
+[data-halal-card-blurred="true"] [style*="background-image"],
+[data-halal-removed="true"] img,
+[data-halal-removed="true"] [style*="background-image"] {
+  opacity: 0 !important;
+  filter: blur(80px) brightness(0.01) !important;
+  visibility: hidden !important;
+}
+
+/* Full Solid Blackout & Frosted Shield Curtain */
+.halal-overlay {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2147483647 !important; /* Maximum 32-bit z-index */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(9, 13, 22, 0.96) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  color: #FFFFFF !important;
+  text-align: center !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+  border-radius: inherit !important;
+  pointer-events: auto !important;
+  animation: halalFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes halalFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.halal-overlay-card {
+  background: rgba(15, 23, 42, 0.97) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8) !important;
+  border-radius: 20px !important;
+  padding: 28px 24px !important;
+  max-width: 320px !important;
+  width: 90% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.halal-overlay-icon {
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 50% !important;
+  background: rgba(16, 185, 129, 0.2) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.halal-overlay-icon svg {
+  width: 28px !important;
+  height: 28px !important;
+  fill: #10B981 !important;
+}
+
+.halal-overlay-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #F8FAFC !important;
+  line-height: 1.2 !important;
+}
+
+.halal-overlay-subtitle {
+  font-size: 13px !important;
+  color: #94A3B8 !important;
+  line-height: 1.4 !important;
+}
+
+.halal-audio-note {
+  font-size: 12px !important;
+  color: #34D399 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+  margin-bottom: 4px !important;
+}
+
+.halal-overlay-buttons {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 6px !important;
+}
+
+.halal-btn-unblur {
+  background: #10B981 !important;
+  color: #0F172A !important;
+  border: none !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  padding: 12px 18px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+  user-select: none !important;
+}
+
+.halal-btn-unblur:hover {
+  background: #34D399 !important;
+  transform: translateY(-1px) !important;
+}
+
+.halal-btn-skip {
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #93C5FD !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  font-weight: 600 !important;
+  font-size: 13.5px !important;
+  padding: 11px 16px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+.halal-btn-skip:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+  border-color: rgba(59, 130, 246, 0.7) !important;
+  color: #FFFFFF !important;
+}
+
+/* Floating Re-blur Button in corner when unblurred */
+.halal-reblur-btn {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  z-index: 2147483647 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(16, 185, 129, 0.6) !important;
+  color: #34D399 !important;
+  padding: 8px 16px !important;
+  border-radius: 20px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+.halal-reblur-btn:hover {
+  background: rgba(15, 23, 42, 1) !important;
+  border-color: #10B981 !important;
+  color: #FFFFFF !important;
+  transform: scale(1.03) !important;
+}
+
+/* Collapsed Reel when Removed / Skipped from Scroll Feed */
+.halal-reel-removed,
+[data-halal-removed="true"],
+article[data-halal-removed="true"],
+div[data-halal-removed="true"] {
+  display: none !important;
+  height: 0px !important;
+  min-height: 0px !important;
+  max-height: 0px !important;
+  margin: 0px !important;
+  padding: 0px !important;
+  border: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  top: -99999px !important;
+  left: -99999px !important;
+  width: 0px !important;
+}
+
+/* Status Pill */
+.halal-status-pill {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #F8FAFC;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.halal-status-pill.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.halal-status-pill .status-icon {
+  width: 14px;
+  height: 14px;
+  fill: #10B981;
+}
+
+.halal-status-pill.skipping {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.halal-status-pill.skipping .status-icon {
+  fill: #EF4444;
+}
+
+/* Toast Notification */
+.halal-skip-toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 9999999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.halal-skip-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.halal-skip-toast .toast-badge {
+  background: #10B981;
+  color: #0F172A;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Daily Scroll Limit Mindful Curtain & Break Screen
+   ========================================================================== */
+.halal-limit-curtain {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important;
+  background: rgba(15, 23, 42, 0.94) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  color: #F8FAFC !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease !important;
+}
+
+.halal-limit-curtain.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.halal-limit-card {
+  background: #1E293B !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.15) !important;
+  border-radius: 24px !important;
+  padding: 36px 32px !important;
+  max-width: 440px !important;
+  width: 100% !important;
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 16px !important;
+  box-sizing: border-box !important;
+  animation: halalLimitScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes halalLimitScaleIn {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.halal-limit-icon-wrap {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 50% !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 2px solid rgba(16, 185, 129, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
+}
+
+.halal-limit-moon {
+  font-size: 34px !important;
+  line-height: 1 !important;
+}
+
+.halal-limit-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 4px 12px !important;
+  border-radius: 9999px !important;
+  background: rgba(245, 158, 11, 0.16) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #FBBF24 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+}
+
+.halal-limit-title {
+  margin: 0 !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.3px !important;
+}
+
+.halal-limit-desc {
+  margin: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #94A3B8 !important;
+}
+
+.halal-limit-desc strong {
+  color: #34D399 !important;
+  font-weight: 700 !important;
+}
+
+.halal-limit-stat-bar {
+  width: 100% !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  box-sizing: border-box !important;
+  margin-top: 4px !important;
+}
+
+.halal-limit-stat-info {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 12.5px !important;
+  color: #CBD5E1 !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+}
+
+.halal-limit-track {
+  width: 100% !important;
+  height: 8px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  overflow: hidden !important;
+}
+
+.halal-limit-fill {
+  height: 100% !important;
+  border-radius: 9999px !important;
+  background: linear-gradient(90deg, #F59E0B, #EF4444) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+  transition: width 0.3s ease !important;
+}
+
+.halal-limit-actions {
+  display: flex !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+}
+
+.halal-limit-btn-break {
+  flex: 1 !important;
+  background: #10B981 !important;
+  color: #0F172A !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+  user-select: none !important;
+}
+
+.halal-limit-btn-break:hover {
+  background: #34D399 !important;
+  transform: translateY(-1px) !important;
+}
+
+.halal-limit-btn-extend {
+  flex: 1 !important;
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #93C5FD !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+.halal-limit-btn-extend:hover {
+  background: rgba(59, 130, 246, 0.32) !important;
+  border-color: rgba(59, 130, 246, 0.7) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px) !important;
+}
+
+.halal-limit-tip {
+  margin: 0 !important;
+  font-size: 11.5px !important;
+  color: #64748B !important;
+  line-height: 1.4 !important;
+}

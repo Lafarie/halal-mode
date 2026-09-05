@@ -1,0 +1,15 @@
+{
+  "name": "halal-mode",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node scripts/test-extension.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vladmandic/face-api": "^1.7.15"
+  }
+}
