@@ -16,16 +16,16 @@
   <a href="https://aistudio.google.com/"><img src="https://img.shields.io/badge/AI_Engine-Gemini_Vision-0D9488?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini Vision" /></a>
   <a href="./scripts/test-extension.js"><img src="https://img.shields.io/badge/Tests-32%2F32_Passed-10B981?style=for-the-badge" alt="32 Tests Passed" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge" alt="MIT License" /></a>
-  <a href="#-privacy--permissions"><img src="https://img.shields.io/badge/Privacy-100%25_Local-6366F1?style=for-the-badge" alt="Privacy First" /></a>
+  <a href="#privacy"><img src="https://img.shields.io/badge/Privacy-100%25_Local-6366F1?style=for-the-badge" alt="Privacy First" /></a>
 </p>
 
 <p align="center">
-  <a href="#-visual-showcase">Showcase</a> •
-  <a href="#-why-halal-mode">Why Halal Mode?</a> •
-  <a href="#-key-features">Features</a> •
-  <a href="#-how-it-works">Architecture</a> •
-  <a href="#-installation--setup">Quick Start</a> •
-  <a href="#-privacy--permissions">Privacy</a>
+  <a href="#showcase">Showcase</a> •
+  <a href="#why-halal-mode">Why Halal Mode?</a> •
+  <a href="#features">Features</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#privacy">Privacy</a>
 </p>
 
 <br>
@@ -36,6 +36,7 @@
 
 ---
 
+<a id="showcase"></a>
 ## 📸 Visual Showcase
 
 <div align="center">
@@ -52,6 +53,7 @@
 
 ---
 
+<a id="why-halal-mode"></a>
 ## 💡 Why Halal Mode?
 
 Short-form video algorithms are engineered to maximize watch time through sensational, hyper-stimulating content. Traditional browser blockers rely on outdated face-landmark heuristics that frequently fail when a person turns their head, wears cultural clothing, or stands in dim lighting.
@@ -70,6 +72,7 @@ Short-form video algorithms are engineered to maximize watch time through sensat
 
 ---
 
+<a id="features"></a>
 ## ✨ Key Features
 
 ### ⚡ 1. Multimodal Gemini Vision AI Engine
@@ -135,6 +138,7 @@ Halal Mode is engineered specifically for vertical short-form video feeds:
 
 ---
 
+<a id="architecture"></a>
 ## 🏗️ How It Works
 
 ```mermaid
@@ -159,6 +163,7 @@ flowchart TD
 
 ---
 
+<a id="quick-start"></a>
 ## 🚀 Installation & Setup
 
 ### Requirements
@@ -216,6 +221,7 @@ npm test
 
 ---
 
+<a id="privacy"></a>
 ## 🔒 Privacy & Permissions
 
 | Permission | Reason |
