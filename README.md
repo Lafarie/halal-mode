@@ -1,23 +1,38 @@
-<div align="center">
+<p align="center">
+  <a href="https://github.com/Lafarie/halal-mode">
+    <img src="./icons/icon-128.png" width="92" height="92" alt="Halal Mode Logo" />
+  </a>
+</p>
 
-# 🛡️ Halal Mode — Intelligent AI Video Protection & Mindful Scrolling
+<h1 align="center">🛡️ Halal Mode</h1>
 
-[![Manifest V3](https://img.shields.io/badge/Manifest-V3-0288D1?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![Gemini Vision AI](https://img.shields.io/badge/AI_Engine-Gemini_Vision-0D9488?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
-[![Tests](https://img.shields.io/badge/Tests-32%2F32_Passed-10B981?style=for-the-badge)](./scripts/test-extension.js)
-[![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge)](./LICENSE)
-[![Privacy First](https://img.shields.io/badge/Privacy-100%25_Local-6366F1?style=for-the-badge)](#-privacy--permissions)
+<p align="center">
+  <strong>Intelligent AI Video Protection & Mindful Doomscroll Limiter</strong><br>
+  <em>Reclaim your focus and protect your gaze across Instagram Reels, YouTube Shorts, and TikTok with cutting-edge Multimodal Vision AI.</em>
+</p>
 
-<br/>
+<p align="center">
+  <a href="https://developer.chrome.com/docs/extensions/mv3/intro/"><img src="https://img.shields.io/badge/Manifest-V3-0288D1?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Manifest V3" /></a>
+  <a href="https://aistudio.google.com/"><img src="https://img.shields.io/badge/AI_Engine-Gemini_Vision-0D9488?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini Vision" /></a>
+  <a href="./scripts/test-extension.js"><img src="https://img.shields.io/badge/Tests-32%2F32_Passed-10B981?style=for-the-badge" alt="32 Tests Passed" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge" alt="MIT License" /></a>
+  <a href="#-privacy--permissions"><img src="https://img.shields.io/badge/Privacy-100%25_Local-6366F1?style=for-the-badge" alt="Privacy First" /></a>
+</p>
 
-**Protect your gaze and reclaim your focus across Instagram Reels, YouTube Shorts, and TikTok.**  
-Powered by Google Gemini Multimodal Vision AI with zero-visibility pre-shielding, local reel memory, and mindful scroll limits.
+<p align="center">
+  <a href="#-visual-showcase">Showcase</a> •
+  <a href="#-why-halal-mode">Why Halal Mode?</a> •
+  <a href="#-key-features">Features</a> •
+  <a href="#-how-it-works">Architecture</a> •
+  <a href="#-installation--setup">Quick Start</a> •
+  <a href="#-privacy--permissions">Privacy</a>
+</p>
 
-<br/>
+<br>
 
-<img src="./assets/popup-preview.png" width="340" alt="Halal Mode Browser Extension UI" />
-
-</div>
+<p align="center">
+  <img src="./assets/popup-preview.png" width="360" alt="Halal Mode Browser Extension UI" />
+</p>
 
 ---
 
@@ -25,9 +40,9 @@ Powered by Google Gemini Multimodal Vision AI with zero-visibility pre-shielding
 
 <div align="center">
 
-| Popup Controller | Shield in Feed |
+| Popup Controller | Reel Shield in Action |
 | :---: | :---: |
-| <img src="./assets/popup-preview.png" width="330" alt="Halal Mode Extension Controls" /> | <img src="./assets/feed-shield.png" width="330" alt="Zero Glimpse Reel Blur Shield" /> |
+| <img src="./assets/popup-preview.png" width="340" alt="Halal Mode Extension Controls" /> | <img src="./assets/feed-shield.png" width="340" alt="Zero-Glimpse Reel Blur Shield" /> |
 
 | Mindful Doomscroll Curtain | Saved Reels Memory Modal |
 | :---: | :---: |
@@ -37,94 +52,100 @@ Powered by Google Gemini Multimodal Vision AI with zero-visibility pre-shielding
 
 ---
 
-## 📖 Overview
+## 💡 Why Halal Mode?
 
-Modern short-form video algorithms are engineered to capture and hold attention through hyper-stimulating, provocative content. **Halal Mode** is an open-source, privacy-first browser extension that uses Google's latest multimodal vision models to automatically detect female faces and figures on screen with near-human accuracy, instantly shielding your gaze and keeping your digital experience clean.
+Short-form video algorithms are engineered to maximize watch time through sensational, hyper-stimulating content. Traditional browser blockers rely on outdated face-landmark heuristics that frequently fail when a person turns their head, wears cultural clothing, or stands in dim lighting.
 
-Unlike rudimentary on-device face detectors that fail with traditional attire, side angles, motion blur, or dim lighting, **Halal Mode** leverages Gemini Vision AI to recognize complex context, dancers, background figures, and multi-person scenes in **under 200ms**.
+**Halal Mode** solves this by connecting directly to Google's multimodal **Gemini Vision AI** combined with instant local pre-shielding:
+
+| Feature | Legacy Face Detectors | Halal Mode (Gemini Vision AI) |
+| :--- | :---: | :---: |
+| **Traditional & Cultural Attire** | ❌ Fails on sarees, abayas, scarves | ✅ **Human-level recognition** |
+| **Side Angles & Turning Heads** | ❌ Loses face mesh landmarks | ✅ **Understands full scene context** |
+| **Dim / Motion-Blurred Scenes** | ❌ Highly error-prone | ✅ **High-accuracy multimodal AI** |
+| **First-Frame Leaks** | ❌ Video flashes before detector runs | ✅ **Zero-Visibility Pre-Shield** |
+| **Re-visiting Scanned Reels** | ⚠️ Wasteful duplicate re-scans | ✅ **Instant 0ms Physical Cache** |
+| **Doomscroll Protection** | ❌ No scroll awareness | ✅ **Daily Reel Quotas & Break Curtain** |
+| **User Privacy** | ⚠️ Often routes via 3rd-party servers | ✅ **100% Direct to Google AI / Local** |
 
 ---
 
 ## ✨ Key Features
 
 ### ⚡ 1. Multimodal Gemini Vision AI Engine
-- **Human-Level Visual Understanding**: Evaluates video frames using `gemini-3.5-flash-lite` (with automatic fallback to `gemini-flash-latest` and local neural weights).
-- **Comprehensive Detection**: Reliably detects women in sarees, abayas, wedding celebrations, fitness clips, side angles, and low-light environments.
-- **Blazing Fast**: Typical API roundtrip is between 150ms and 250ms.
+- **State-of-the-Art Accuracy**: Evaluates frames using `gemini-3.5-flash-lite` with automatic fallback to `gemini-flash-latest` and local neural weights.
+- **Contextual Understanding**: Reliably detects women in dance routines, wedding processions, fitness videos, low-light stages, and multi-person scenes.
+- **Sub-200ms Latency**: Streamlined base64 capture pipeline ensures evaluations finish before you even notice.
 
 ### 🛡️ 2. Zero-Visibility Pre-Shielding
-- **No Accidental Glances**: When an unverified video scrolls into view, an impenetrable black veil covers the element before the first frame can register in your sight.
-- **Instant Unshield**: If Gemini verifies the reel is safe or falls within your custom tolerance threshold, the shield lifts smoothly in ~200ms.
-- **Permanent Lock**: If female presence is confirmed, the video is instantly locked behind an impenetrable 80px blur filter and a custom interactive control card.
+- **Zero Accidental Glances**: An impenetrable dark veil immediately covers incoming unverified reels before the first frame can register in your vision.
+- **Smooth Unshield**: If Gemini confirms the reel is safe, the shield lifts seamlessly in ~200ms.
+- **Instant Lockdown**: If female presence is detected, the video is securely blurred with an impenetrable 80px filter and on-screen controls.
 
-<div align="center">
-  <img src="./assets/feed-shield.png" width="380" alt="Feed Shield in Action" />
-  <p><em>Impenetrable dark shield with on-screen Unblur Video and Skip to Next Reel controls.</em></p>
-</div>
+<p align="center">
+  <img src="./assets/feed-shield.png" width="360" alt="Zero-Visibility Pre-Shield in Action" /><br>
+  <em>Impenetrable blur shield with on-screen Unblur Video and Skip to Next Reel controls.</em>
+</p>
 
-### 🔮 3. Speculative Feed Pre-Scanning
-- **Lookahead Intelligence**: Scans upcoming videos pre-loaded into the DOM *before* you scroll to them.
-- By the time you reach the next reel, it has already been classified and either cleared for instant playback or pre-shielded and collapsed.
+### ⏳ 3. Mindful Daily Doomscroll Limiter
+- **Take Back Your Time**: Set a daily budget (e.g. 50, 100, 150, 200 reels).
+- **Graceful Break Curtain**: When your daily quota is reached, active playback is paused and a peaceful reminder overlay invites you to disconnect.
+- **Gentle Extension**: Includes a +15 reel extension button if you need to finish research or save a recipe.
+- **Automatic Midnight Rollover**: Counters automatically reset each morning according to your local calendar date.
 
-### ⏳ 4. Mindful Daily Doomscroll Limiter
-- **Doomscroll Prevention**: Set a daily quota (e.g. 50, 100, 150, 200 reels).
-- **Graceful Mindfulness Curtain**: Once your daily limit is reached, active playback is paused and a peaceful reminder overlay encourages you to step away and refocus on real life.
-- **Quick Extension**: Includes a gentle +15 reel extension button if you need to finish research or a specific clip.
-- **Midnight Auto-Reset**: Counters reset automatically at midnight in your local timezone.
+<p align="center">
+  <img src="./assets/scroll-limit-curtain.png" width="480" alt="Mindful Daily Doomscroll Limit Curtain" /><br>
+  <em>Peaceful reminder curtain displayed upon reaching your daily scroll limit.</em>
+</p>
 
-<div align="center">
-  <img src="./assets/scroll-limit-curtain.png" width="520" alt="Daily Scroll Limit Curtain" />
-  <p><em>Peaceful break curtain displayed upon reaching daily reel quota.</em></p>
-</div>
+### 💾 4. Physical Reel Memory (0ms Latency on Revisits)
+- **Zero API Quota Waste**: Every classified reel ID is permanently saved to your browser's local database (`chrome.storage.local`).
+- **Instant Playback**: Scrolling back up or revisiting saved reels takes **0ms** and consumes **0 API tokens**.
+- **Interactive Registry Manager**: Search, filter by verdict, view confidence scores, or export your saved list to **CSV** or **JSON**.
 
-### 🎚️ 5. Customizable Tolerance & AI Strictness
-Adjust the corner and background sensitivity slider from 0% to 100%:
-- **0% (Strict Mode)**: Any female presence anywhere on screen (even a distant corner or background passerby) is hidden immediately.
-- **1% – 60% (Balanced Mode)**: Allows small background bystanders or tiny corner snippets, but strictly blocks focal subjects.
-- **61% – 100% (Permissive Mode)**: Only conceals primary, close-up, or full-screen focal subjects.
+<p align="center">
+  <img src="./assets/physical-cache-modal.png" width="500" alt="Physical Cache Database Modal" /><br>
+  <em>Search, filter, toggle verdicts, or export saved reel memory to CSV or JSON.</em>
+</p>
 
-### 💾 6. Physical Reel Memory (0ms Latency on Revisits)
-- **Zero API Waste**: Every classified reel is saved locally in `chrome.storage.local`.
-- When scrolling back up or revisiting a reel, classification latency is **0ms** and consumes **0 API quota**.
-- **Interactive Database Manager**: Search, filter, view details, toggle verdicts (Hidden vs Allowed), or export your registry as **CSV** or **JSON**.
+### 🎚️ 5. AI Strictness & Corner Tolerance Slider
+Customize the sensitivity slider from 0% to 100%:
+- **0% (Strict)**: Conceals any female presence anywhere on screen, including tiny corner graphics or distant background passersby.
+- **1% – 60% (Balanced)**: Permits subtle background figures, but strictly blocks focal or centered subjects.
+- **61% – 100% (Permissive)**: Blocks only primary, close-up, or full-screen focal subjects.
 
-<div align="center">
-  <img src="./assets/physical-cache-modal.png" width="540" alt="Physical Cache Modal" />
-  <p><em>Search, filter, toggle verdicts, or export saved reel memory to CSV / JSON.</em></p>
-</div>
+### ⏭️ 6. Dual Action Modes
+- **Blur Mode**: Blurs the video 100% while keeping audio active. Unblur and Skip buttons appear directly on the video card.
+- **Auto-Skip Mode**: Instantly blurs and physically collapses the card out of the feed, auto-advancing to the next reel.
 
-### ⏭️ 7. Dual Action Modes
-- **Blur Mode**: Applies an impenetrable blur shield while keeping audio active. Includes on-screen **"Unblur Video"** and **"Skip to Next Reel"** controls.
-- **Auto-Skip Mode**: Blurs the reel immediately and physically collapses it out of the scroll feed, advancing automatically to the next reel.
-
-### ⌨️ 8. Keyboard Hotkeys
-- Press **`B`** at any moment on your keyboard to instantly blur the active video and save it to your permanent blocklist.
+### ⌨️ 7. Instant Keyboard Shortcut
+- Press **`B`** at any moment while watching to instantly blur the current reel and add it to your permanent memory blocklist.
 
 ---
 
 ## 🌐 Supported Platforms
 
-Halal Mode is purpose-built for short-form video platforms:
+Halal Mode is engineered specifically for vertical short-form video feeds:
 
-| Platform | Supported Route | Isolation & Safety |
+| Platform | Supported Route | Scope & Isolation |
 | :--- | :--- | :--- |
-| **Instagram** | `/reels/*`, `/reel/*` | ⚠️ **Stories (`/stories/*`) and Direct Messages (`/direct/*`) are strictly excluded** to ensure personal conversations and stories remain uninterrupted. |
-| **YouTube** | `/shorts/*` | Standard horizontal videos (`/watch`) are excluded. |
+| **Instagram** | `/reels/*`, `/reel/*` | ⚠️ **Stories (`/stories/*`) and Direct Messages (`/direct/*`) are strictly excluded** so personal chats and stories play uninterrupted. |
+| **YouTube** | `/shorts/*` | Standard landscape videos (`/watch`) are ignored. |
 | **TikTok** | Video feed (`/video/*`) | All feed videos. |
 
 ---
 
-## 🏗️ Architecture & How It Works
+## 🏗️ How It Works
 
 ```mermaid
 flowchart TD
-    A[New Video Appears in Viewport] --> B{Is Reel Context?}
-    B -- No (Stories, DMs, Feed) --> C[Ignore Video - Allow Normal Playback]
+    A[New Video Appears in Feed] --> B{Is Reel Context?}
+    B -- No (Stories, DMs, Main Feed) --> C[Allow Normal Playback]
     B -- Yes --> D[Apply Zero-Visibility Pre-Shield]
     D --> E{Found in Local Physical Memory?}
-    E -- Found Safe --> F[Lift Shield Instantly - 0ms]
-    E -- Found Hidden --> G[Apply 100% Blur Shield / Auto-Skip]
-    E -- Not Found --> H[Capture 720x1280 Letterboxed Frame]
+    E -- Safe in Cache --> F[Lift Shield Instantly - 0ms]
+    E -- Hidden in Cache --> G[Apply 100% Blur Shield / Auto-Skip]
+    E -- Unscanned --> H[Capture 720x1280 Letterboxed Frame]
     H --> I[Send to Gemini Vision AI API]
     I --> J{Woman or Girl Detected?}
     J -- No --> K[Save 'Allowed' to Memory & Lift Shield]
@@ -132,8 +153,8 @@ flowchart TD
     L -- Within Tolerance --> K
     L -- Exceeds Tolerance --> M[Save 'Hidden' to Memory]
     M --> G
-    G --> N{Daily Scroll Limit Enabled?}
-    N -- Limit Exceeded --> O[Display Mindful Break Curtain]
+    G --> N{Daily Scroll Limit Exceeded?}
+    N -- Yes --> O[Display Mindful Break Curtain]
 ```
 
 ---
@@ -144,50 +165,50 @@ flowchart TD
 - Any modern Chromium browser: **Google Chrome**, **Microsoft Edge**, **Brave**, **Opera**, or **Arc**.
 - A free **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/).
 
-### Installation Steps
+### Quick Start
 
 1. **Clone or Download the Repository**:
    ```bash
    git clone https://github.com/Lafarie/halal-mode.git
    cd halal-mode
    ```
-   *(Or download the ZIP file from GitHub and extract it to a folder).*
+   *(Or download the ZIP from GitHub and extract it).*
 
 2. **Open Extensions in Your Browser**:
-   - In Chrome: `chrome://extensions/`
-   - In Edge: `edge://extensions/`
-   - In Brave: `brave://extensions/`
+   - Chrome: `chrome://extensions/`
+   - Edge: `edge://extensions/`
+   - Brave: `brave://extensions/`
 
 3. **Enable Developer Mode**:
    - Toggle the **Developer mode** switch in the top-right corner.
 
 4. **Load the Extension**:
-   - Click the **Load unpacked** button in the top-left.
-   - Select the `halal-mode` folder that contains `manifest.json`.
+   - Click **Load unpacked** in the top-left corner.
+   - Select the `halal-mode` directory containing `manifest.json`.
 
-5. **Pin the Extension**:
-   - Click the puzzle icon in your browser toolbar and pin **Halal Mode** for quick access.
+5. **Pin Halal Mode**:
+   - Click the extension puzzle icon in your browser toolbar and pin **Halal Mode**.
 
 ---
 
-## 🔑 Obtaining a Free Gemini API Key
+## 🔑 Obtaining Your Free Gemini API Key
 
-1. Visit [Google AI Studio](https://aistudio.google.com/).
-2. Sign in with your Google account.
+1. Go to [Google AI Studio](https://aistudio.google.com/).
+2. Sign in with any Google account.
 3. Click **Get API key** → **Create API key**.
-4. Copy the generated key.
-5. Open the **Halal Mode** popup, click the settings gear or AI status card, paste your key, and click **Save Key**.
+4. Copy your key.
+5. Click the **Halal Mode** extension icon, paste your key into the **AI Token** field, and click **Save Key**.
 6. The status pill will turn green: `Gemini Vision AI Engine: Active`.
 
-> 🔒 **Security Notice**: Your API key is stored exclusively in your browser's local encrypted storage (`chrome.storage.local`). It is sent directly to Google's official Gemini endpoint (`https://generativelanguage.googleapis.com/`) over HTTPS. It is never transmitted to any third-party server or developer telemetry.
+> 🔒 **Security Promise**: Your API key is stored exclusively in your browser's private local storage (`chrome.storage.local`). It communicates directly with Google's official Gemini endpoint (`https://generativelanguage.googleapis.com/`) over HTTPS. It is never routed through any intermediary server.
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Automated Testing
 
-Halal Mode includes a comprehensive automated test suite with **32 unit and integration assertions** verifying Manifest V3 specifications, URL isolation, counter deduplication, anti-flood throttling, and timezone rollover.
+Halal Mode includes a test suite with **32 unit and integration assertions** covering Manifest V3 compliance, URL isolation, anti-flood throttling, and timezone rollover.
 
-Run the test suite via Node.js:
+Run tests anytime with:
 
 ```bash
 npm test
@@ -197,21 +218,19 @@ npm test
 
 ## 🔒 Privacy & Permissions
 
-Halal Mode values user privacy above all else:
-
-| Permission | Purpose |
+| Permission | Reason |
 | :--- | :--- |
-| `storage` | Saves your settings, tolerance preference, daily scroll counts, and physical cache locally on your device. |
-| `tabs` | Required to query current tab URL and status when opening the popup controls. |
-| `declarativeNetRequest` | Used to block ad trackers that inject un-shielded video previews. |
+| `storage` | Stores your settings, daily limit counts, and physical cache locally on your machine. |
+| `tabs` | Used to inspect active tab status when opening the popup controller. |
+| `declarativeNetRequest` | Blocks ad trackers that attempt to inject un-shielded video previews. |
 | `host_permissions` | Allows content scripts and frame capture on `instagram.com`, `youtube.com`, and `tiktok.com`. |
 
-- **No Remote Telemetry**: No tracking scripts, analytics, or third-party SDKs.
-- **No Account Required**: Works immediately with your own API key.
-- **Open Source**: Full codebase is visible and auditable by anyone.
+- **Zero Tracking**: No Google Analytics, telemetry scripts, or fingerprinting.
+- **Zero Middlemen**: 100% direct connection between your browser and Google AI.
+- **Fully Auditable**: Clean, un-obfuscated open-source codebase.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
