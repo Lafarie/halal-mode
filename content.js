@@ -21,6 +21,16 @@
     showToast: true
   };
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // Helper: Verify that the current page/element is strictly a Reel (Instagram Reels, YouTube Shorts, TikTok)
   // Absolutely excludes Instagram Stories, Direct Messages, profile pages, etc.
   function isReelContext(video = null) {
@@ -1309,7 +1319,7 @@
               <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.06-7 10.18-3.87-1.12-7-5.51-7-10.18V6.3l7-3.12z"/></svg>
             </div>
             <h3 class="halal-overlay-title">Photo Blurred</h3>
-            <p class="halal-overlay-subtitle">${reason || 'Manually blurred'}</p>
+            <p class="halal-overlay-subtitle">${escapeHtml(reason || 'Manually blurred')}</p>
             <div class="halal-overlay-buttons">
               <button class="halal-btn-unblur" id="halalUnblurImgBtn">Unblur Photo</button>
             </div>
@@ -1370,7 +1380,7 @@
               </svg>
             </div>
             <h3 class="halal-overlay-title">Video Blurred</h3>
-            <p class="halal-overlay-subtitle">${confText}</p>
+            <p class="halal-overlay-subtitle">${escapeHtml(confText)}</p>
             <span class="halal-audio-note">🔊 Audio continues playing normally</span>
             <div class="halal-overlay-buttons">
               <button class="halal-btn-unblur" id="halalUnblurBtn">

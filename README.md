@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/Lafarie/halal-mode">
-    <img src="./icons/icon-128.png" width="92" height="92" alt="Halal Mode Logo" />
+    <img src="./assets/logo.png" width="110" height="110" alt="Halal Mode Logo" />
   </a>
 </p>
 
