@@ -15,11 +15,22 @@
     dailyScrollLimit: 100,
     todayScrollCount: 0,
     todayDate: "",
+    todayYouTubeSeconds: 0,
+    youtubeTimeLimitEnabled: false,
+    youtubeTimeLimitMinutes: 30,
     cornerTolerance: 0, // 0 = Strict (No girls anywhere on screen), 50 = Corner OK, up to 100
     sensitivity: 65,
     scanIntervalMs: 800,
     showToast: true
   };
+
+  function getActivePlatform() {
+    const host = window.location.hostname || '';
+    if (host.includes('instagram.com')) return 'instagram';
+    if (host.includes('youtube.com')) return 'youtube';
+    if (host.includes('tiktok.com')) return 'tiktok';
+    return 'web';
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -104,7 +115,8 @@
     safeSendMessage({
       action: 'incrementSkipped',
       reelId: key,
-      url: reelUrl
+      url: reelUrl,
+      platform: getActivePlatform()
     });
   }
 
@@ -341,6 +353,187 @@
     }
   }
 
+  // 1.3 YouTube Time Tracking & Mindful Screen Time Limiter
+  let isYtTimeLimitActive = false;
+  let ytTimeAccumulator = 0;
+  let ytHeartbeatInterval = null;
+
+  function isYouTubeTimeLimitReached() {
+    if (!settings.enabled || !settings.youtubeTimeLimitEnabled) return false;
+    if (!window.location.hostname.includes('youtube.com')) return false;
+    const limitMin = typeof settings.youtubeTimeLimitMinutes === 'number' ? settings.youtubeTimeLimitMinutes : 30;
+    const spentSec = typeof settings.todayYouTubeSeconds === 'number' ? settings.todayYouTubeSeconds : 0;
+    return spentSec >= (limitMin * 60);
+  }
+
+  function showYouTubeTimeLimitCurtain(todaySeconds = null, limitMinutes = null) {
+    if (!document.body || !window.location.hostname.includes('youtube.com')) return;
+
+    isYtTimeLimitActive = true;
+    pauseAllVideos();
+
+    let curtain = document.getElementById('halal-yt-time-curtain');
+    if (!curtain) {
+      curtain = document.createElement('div');
+      curtain.id = 'halal-yt-time-curtain';
+      curtain.className = 'halal-limit-curtain';
+      curtain.innerHTML = `
+        <div class="halal-limit-card">
+          <div class="halal-limit-icon-wrap" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35); box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);">
+            <span class="halal-limit-moon">⏳</span>
+          </div>
+          <div class="halal-limit-pill" style="background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.4); color: #F87171;">
+            YouTube Time Limit Reached
+          </div>
+          <h2 class="halal-limit-title">Time for a Mindful Break</h2>
+          <p class="halal-limit-desc">
+            You've reached your daily limit of <strong class="halal-yt-time-target-num" style="color: #F87171;">30m</strong> on YouTube today.
+            Safeguard your gaze, disconnect, and give your mind a restful pause.
+          </p>
+          <div class="halal-limit-stat-bar">
+            <div class="halal-limit-stat-info">
+              <span>Today's YouTube Time</span>
+              <span class="halal-yt-time-stat">30m / 30m</span>
+            </div>
+            <div class="halal-limit-track">
+              <div class="halal-limit-fill" style="width: 100%; background: linear-gradient(90deg, #F87171 0%, #EF4444 100%);"></div>
+            </div>
+          </div>
+          <div class="halal-limit-actions">
+            <button class="halal-limit-btn-break" id="halal-yt-break-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+              </svg>
+              <span>Pause &amp; Rest</span>
+            </button>
+            <button class="halal-limit-btn-extend" id="halal-yt-extend-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              <span>+15 More Minutes</span>
+            </button>
+          </div>
+          <p class="halal-limit-tip">You can adjust or disable YouTube limits anytime in the Halal Mode popup.</p>
+        </div>
+      `;
+      document.body.appendChild(curtain);
+
+      const breakBtn = curtain.querySelector('#halal-yt-break-btn');
+      if (breakBtn) {
+        breakBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          pauseAllVideos();
+          breakBtn.innerHTML = `<span>Paused 🌿 Time to Rest</span>`;
+          breakBtn.style.opacity = '0.85';
+          try { window.close(); } catch (err) {}
+        });
+      }
+
+      const extendBtn = curtain.querySelector('#halal-yt-extend-btn');
+      if (extendBtn) {
+        extendBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          extendBtn.disabled = true;
+          extendBtn.innerHTML = `<span>Extending...</span>`;
+          safeSendMessage({ action: 'extendYouTubeTimeLimit', amount: 15 }, (resp) => {
+            if (resp && resp.success) {
+              settings.youtubeTimeLimitMinutes = resp.newLimit;
+              removeYouTubeTimeLimitCurtain();
+              showToastNotification(`YouTube limit extended to ${resp.newLimit} minutes (+15m)`);
+              if (currentActiveVideo) {
+                try { currentActiveVideo.play(); } catch (err) {}
+              }
+            } else {
+              removeYouTubeTimeLimitCurtain();
+            }
+          });
+        });
+      }
+    }
+
+    const spentSec = todaySeconds !== null ? todaySeconds : (settings.todayYouTubeSeconds || 0);
+    const limitMin = limitMinutes !== null ? limitMinutes : (settings.youtubeTimeLimitMinutes || 30);
+    const spentMin = Math.round(spentSec / 60);
+
+    const targetNum = curtain.querySelector('.halal-yt-time-target-num');
+    const timeStat = curtain.querySelector('.halal-yt-time-stat');
+    if (targetNum) targetNum.textContent = `${limitMin}m`;
+    if (timeStat) timeStat.textContent = `${spentMin}m / ${limitMin}m`;
+
+    curtain.classList.add('active');
+  }
+
+  function removeYouTubeTimeLimitCurtain() {
+    isYtTimeLimitActive = false;
+    const curtain = document.getElementById('halal-yt-time-curtain');
+    if (curtain) {
+      curtain.classList.remove('active');
+    }
+  }
+
+  function checkAndEnforceYouTubeTimeLimit() {
+    if (isYouTubeTimeLimitReached()) {
+      showYouTubeTimeLimitCurtain();
+    } else {
+      removeYouTubeTimeLimitCurtain();
+    }
+  }
+
+  function setupYouTubeTimeTracker() {
+    if (!window.location.hostname.includes('youtube.com')) return;
+
+    function flushYouTubeTime() {
+      if (ytTimeAccumulator <= 0) return;
+      const secondsToAdd = ytTimeAccumulator;
+      ytTimeAccumulator = 0;
+
+      safeSendMessage({ action: 'logYouTubeTime', seconds: secondsToAdd }, (resp) => {
+        if (resp && resp.success) {
+          settings.todayYouTubeSeconds = resp.todayYouTubeSeconds;
+          settings.youtubeTimeLimitMinutes = resp.youtubeTimeLimitMinutes;
+          settings.youtubeTimeLimitEnabled = resp.youtubeTimeLimitEnabled;
+          if (resp.limitReached) {
+            showYouTubeTimeLimitCurtain(resp.todayYouTubeSeconds, resp.youtubeTimeLimitMinutes);
+          } else {
+            removeYouTubeTimeLimitCurtain();
+          }
+        }
+      });
+    }
+
+    if (ytHeartbeatInterval) clearInterval(ytHeartbeatInterval);
+    ytHeartbeatInterval = setInterval(() => {
+      if (document.hidden) return;
+      ytTimeAccumulator += 1;
+
+      if (ytTimeAccumulator >= 5) {
+        flushYouTubeTime();
+      }
+    }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        flushYouTubeTime();
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      flushYouTubeTime();
+    });
+
+    // Check initial limit status on load
+    safeSendMessage({ action: 'getYouTubeTimeData' }, (resp) => {
+      if (resp && resp.success) {
+        settings.todayYouTubeSeconds = resp.todayYouTubeSeconds;
+        settings.youtubeTimeLimitMinutes = resp.youtubeTimeLimitMinutes;
+        settings.youtubeTimeLimitEnabled = resp.youtubeTimeLimitEnabled;
+        if (resp.limitReached) {
+          showYouTubeTimeLimitCurtain(resp.todayYouTubeSeconds, resp.youtubeTimeLimitMinutes);
+        }
+      }
+    });
+  }
+
   // 1.2 URL-based Reel Navigation & Daily Limit Tracking Engine
   let lastTrackedReelUrl = "";
   let lastTrackedReelKey = null;
@@ -397,7 +590,11 @@
 
     // Count this unique reel navigation
     if (settings.enabled && settings.dailyLimitEnabled) {
-      safeSendMessage({ action: 'incrementDailyScroll', reelKey: currentKey }, (resp) => {
+      safeSendMessage({
+        action: 'incrementDailyScroll',
+        reelKey: currentKey,
+        platform: getActivePlatform()
+      }, (resp) => {
         if (resp && resp.success) {
           settings.todayScrollCount = resp.todayScrollCount;
           settings.dailyScrollLimit = resp.dailyScrollLimit;
@@ -1966,6 +2163,9 @@
         'dailyScrollLimit',
         'todayScrollCount',
         'todayDate',
+        'todayYouTubeSeconds',
+        'youtubeTimeLimitEnabled',
+        'youtubeTimeLimitMinutes',
         'cornerTolerance',
         'sensitivity',
         'scanIntervalMs',
@@ -1982,6 +2182,8 @@
 
     updateBodyClasses();
     checkAndEnforceDailyLimit();
+    checkAndEnforceYouTubeTimeLimit();
+    setupYouTubeTimeTracker();
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== 'local') return;
@@ -2008,6 +2210,18 @@
       if (changes.todayDate !== undefined) {
         settings.todayDate = changes.todayDate.newValue;
         checkAndEnforceDailyLimit();
+      }
+      if (changes.youtubeTimeLimitEnabled !== undefined) {
+        settings.youtubeTimeLimitEnabled = changes.youtubeTimeLimitEnabled.newValue;
+        checkAndEnforceYouTubeTimeLimit();
+      }
+      if (changes.youtubeTimeLimitMinutes !== undefined) {
+        settings.youtubeTimeLimitMinutes = changes.youtubeTimeLimitMinutes.newValue;
+        checkAndEnforceYouTubeTimeLimit();
+      }
+      if (changes.todayYouTubeSeconds !== undefined) {
+        settings.todayYouTubeSeconds = changes.todayYouTubeSeconds.newValue;
+        checkAndEnforceYouTubeTimeLimit();
       }
       if (changes.cornerTolerance !== undefined) settings.cornerTolerance = changes.cornerTolerance.newValue;
       if (changes.physicalList) physicalList = changes.physicalList.newValue || {};

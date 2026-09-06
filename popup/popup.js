@@ -68,6 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const removeSkippedToggle = document.getElementById('removeSkippedToggle');
   const toastToggle = document.getElementById('toastToggle');
   const skippedCountEl = document.getElementById('skippedCount');
+  const igSkippedCountEl = document.getElementById('igSkippedCount');
+  const ytSkippedCountEl = document.getElementById('ytSkippedCount');
+  const todayIgScrollCountEl = document.getElementById('todayIgScrollCount');
+  const todayYtScrollCountEl = document.getElementById('todayYtScrollCount');
   const resetBtn = document.getElementById('resetBtn');
 
   // Daily Scroll Limit elements
@@ -79,7 +83,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnLimitMinus = document.getElementById('btnLimitMinus');
   const btnLimitPlus = document.getElementById('btnLimitPlus');
   const btnResetToday = document.getElementById('btnResetToday');
-  const limitChips = document.querySelectorAll('.limit-chip');
+  const limitChips = document.querySelectorAll('.limit-chip:not(.yt-time-chip)');
+
+  // YouTube Time Limiter elements
+  const ytTimeLimitToggle = document.getElementById('ytTimeLimitToggle');
+  const ytTimeStatusPill = document.getElementById('ytTimeStatusPill');
+  const ytTimeProgressStat = document.getElementById('ytTimeProgressStat');
+  const ytTimeProgressBar = document.getElementById('ytTimeProgressBar');
+  const ytTimeLimitInput = document.getElementById('ytTimeLimitInput');
+  const btnYtTimeMinus = document.getElementById('btnYtTimeMinus');
+  const btnYtTimePlus = document.getElementById('btnYtTimePlus');
+  const btnResetYtTime = document.getElementById('btnResetYtTime');
+  const ytTimeChips = document.querySelectorAll('.yt-time-chip');
 
   // Load current settings from chrome.storage.local
   const data = await chrome.storage.local.get([
@@ -93,9 +108,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     'dailyLimitEnabled',
     'dailyScrollLimit',
     'todayScrollCount',
+    'todayInstagramScrollCount',
+    'todayYouTubeScrollCount',
     'todayDate',
+    'todayYouTubeSeconds',
+    'youtubeTimeLimitEnabled',
+    'youtubeTimeLimitMinutes',
     'showToast',
     'skippedCount',
+    'instagramSkippedCount',
+    'youtubeSkippedCount',
     'physicalList'
   ]);
 
@@ -111,6 +133,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   apiKeyInput.value = currentKey;
   updateAiStatus(currentKey);
 
+  // Platform counters state
+  let currentSkippedCount = data.skippedCount || 0;
+  let currentIgSkipped = data.instagramSkippedCount || 0;
+  let currentYtSkipped = data.youtubeSkippedCount || 0;
+  let currentTodayIg = data.todayInstagramScrollCount || 0;
+  let currentTodayYt = data.todayYouTubeScrollCount || 0;
+
+  function updatePlatformCountsUI(total, ig, yt, todayIg, todayYt) {
+    if (skippedCountEl) skippedCountEl.textContent = (total || 0).toLocaleString();
+    if (igSkippedCountEl) igSkippedCountEl.textContent = (ig || 0).toLocaleString();
+    if (ytSkippedCountEl) ytSkippedCountEl.textContent = (yt || 0).toLocaleString();
+    if (todayIgScrollCountEl) todayIgScrollCountEl.textContent = (todayIg || 0).toLocaleString();
+    if (todayYtScrollCountEl) todayYtScrollCountEl.textContent = (todayYt || 0).toLocaleString();
+  }
+
+  updatePlatformCountsUI(currentSkippedCount, currentIgSkipped, currentYtSkipped, currentTodayIg, currentTodayYt);
+
   // Daily Limit state
   let currentDailyLimitEnabled = data.dailyLimitEnabled !== undefined ? data.dailyLimitEnabled : true;
   let currentDailyLimit = typeof data.dailyScrollLimit === 'number' ? data.dailyScrollLimit : 100;
@@ -120,10 +159,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const todayStr = getTodayDateString();
   if (data.todayDate && data.todayDate !== todayStr) {
     currentTodayCount = 0;
-    await chrome.storage.local.set({ todayDate: todayStr, todayScrollCount: 0, todaySeenReels: {} });
+    currentTodayIg = 0;
+    currentTodayYt = 0;
+    await chrome.storage.local.set({
+      todayDate: todayStr,
+      todayScrollCount: 0,
+      todayInstagramScrollCount: 0,
+      todayYouTubeScrollCount: 0,
+      todayYouTubeSeconds: 0,
+      todaySeenReels: {}
+    });
   }
 
-  function updateDailyLimitUI(enabled, limit, todayCount) {
+  function updateDailyLimitUI(enabled, limit, todayCount, todayIg = currentTodayIg, todayYt = currentTodayYt) {
     if (dailyLimitToggle) dailyLimitToggle.checked = enabled;
 
     if (limitStatusPill) {
@@ -146,6 +194,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       limitProgressStat.textContent = `${todayCount} / ${limit} Reels (${pct}%)`;
     }
 
+    if (todayIgScrollCountEl) todayIgScrollCountEl.textContent = (todayIg || 0).toLocaleString();
+    if (todayYtScrollCountEl) todayYtScrollCountEl.textContent = (todayYt || 0).toLocaleString();
+
     if (limitProgressBar) {
       limitProgressBar.style.width = `${pct}%`;
       limitProgressBar.className = 'limit-progress-bar';
@@ -164,7 +215,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+  updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
+
+  // YouTube Time Limiter state
+  let currentYtTimeLimitEnabled = data.youtubeTimeLimitEnabled !== undefined ? data.youtubeTimeLimitEnabled : false;
+  let currentYtTimeLimit = typeof data.youtubeTimeLimitMinutes === 'number' ? data.youtubeTimeLimitMinutes : 30;
+  let currentTodayYtSeconds = data.todayYouTubeSeconds || 0;
+
+  function formatTimeMinutes(seconds) {
+    const totalMinutes = Math.floor((seconds || 0) / 60);
+    if (totalMinutes < 60) return `${totalMinutes}m`;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+
+  function updateYouTubeTimeUI(enabled, limitMinutes, todaySeconds) {
+    if (ytTimeLimitToggle) ytTimeLimitToggle.checked = enabled;
+
+    const limitReached = enabled && todaySeconds >= (limitMinutes * 60);
+
+    if (ytTimeStatusPill) {
+      if (!enabled) {
+        ytTimeStatusPill.textContent = 'Off';
+        ytTimeStatusPill.className = 'limit-status-pill yt-pill disabled';
+      } else if (limitReached) {
+        ytTimeStatusPill.textContent = 'Time Up';
+        ytTimeStatusPill.className = 'limit-status-pill yt-pill active';
+      } else {
+        ytTimeStatusPill.textContent = 'Active';
+        ytTimeStatusPill.className = 'limit-status-pill yt-pill';
+      }
+    }
+
+    if (ytTimeLimitInput) {
+      ytTimeLimitInput.value = limitMinutes;
+      ytTimeLimitInput.disabled = !enabled;
+    }
+
+    const pct = Math.min(100, Math.round((todaySeconds / (limitMinutes * 60)) * 100)) || 0;
+    if (ytTimeProgressStat) {
+      ytTimeProgressStat.textContent = `${formatTimeMinutes(todaySeconds)} / ${limitMinutes}m (${pct}%)`;
+    }
+    if (ytTimeProgressBar) {
+      ytTimeProgressBar.style.width = `${pct}%`;
+    }
+
+    if (ytTimeChips) {
+      ytTimeChips.forEach(chip => {
+        const val = Number(chip.dataset.time);
+        chip.classList.toggle('active', val === limitMinutes);
+      });
+    }
+  }
+
+  updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
 
   // Handle action mode (default 'blur')
   const currentMode = (data.actionMode === 'skip' || data.actionMode === 'remove') ? 'skip' : 'blur';
@@ -847,7 +952,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dailyLimitToggle.addEventListener('change', async (e) => {
       currentDailyLimitEnabled = e.target.checked;
       await chrome.storage.local.set({ dailyLimitEnabled: currentDailyLimitEnabled });
-      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
     });
   }
 
@@ -857,7 +962,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentDailyLimit = val;
       e.target.value = val;
       await chrome.storage.local.set({ dailyScrollLimit: val });
-      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
     });
   }
 
@@ -866,7 +971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       let val = Math.max(10, currentDailyLimit - 10);
       currentDailyLimit = val;
       await chrome.storage.local.set({ dailyScrollLimit: val });
-      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
     });
   }
 
@@ -875,7 +980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       let val = Math.min(1000, currentDailyLimit + 10);
       currentDailyLimit = val;
       await chrome.storage.local.set({ dailyScrollLimit: val });
-      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
     });
   }
 
@@ -883,8 +988,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnResetToday.addEventListener('click', async () => {
       if (confirm("Reset today's scroll count back to 0?")) {
         currentTodayCount = 0;
-        await chrome.storage.local.set({ todayScrollCount: 0, todaySeenReels: {} });
-        updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, 0);
+        currentTodayIg = 0;
+        currentTodayYt = 0;
+        await chrome.storage.local.set({
+          todayScrollCount: 0,
+          todayInstagramScrollCount: 0,
+          todayYouTubeScrollCount: 0,
+          todaySeenReels: {}
+        });
+        updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, 0, 0, 0);
+        updatePlatformCountsUI(currentSkippedCount, currentIgSkipped, currentYtSkipped, 0, 0);
       }
     });
   }
@@ -896,31 +1009,118 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (val) {
           currentDailyLimit = val;
           await chrome.storage.local.set({ dailyScrollLimit: val });
-          updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+          updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
         }
       });
     });
   }
 
-  resetBtn.addEventListener('click', async () => {
-    await chrome.storage.local.set({ skippedCount: 0, seenProtectedReels: {} });
-    skippedCountEl.textContent = '0';
-  });
+  // YouTube Time Limit listeners
+  if (ytTimeLimitToggle) {
+    ytTimeLimitToggle.addEventListener('change', async (e) => {
+      currentYtTimeLimitEnabled = e.target.checked;
+      await chrome.storage.local.set({ youtubeTimeLimitEnabled: currentYtTimeLimitEnabled });
+      updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
+    });
+  }
+
+  if (ytTimeLimitInput) {
+    ytTimeLimitInput.addEventListener('change', async (e) => {
+      let val = Math.max(5, Math.min(480, Number(e.target.value) || 30));
+      currentYtTimeLimit = val;
+      e.target.value = val;
+      await chrome.storage.local.set({ youtubeTimeLimitMinutes: val });
+      updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
+    });
+  }
+
+  if (btnYtTimeMinus) {
+    btnYtTimeMinus.addEventListener('click', async () => {
+      let val = Math.max(5, currentYtTimeLimit - 5);
+      currentYtTimeLimit = val;
+      await chrome.storage.local.set({ youtubeTimeLimitMinutes: val });
+      updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
+    });
+  }
+
+  if (btnYtTimePlus) {
+    btnYtTimePlus.addEventListener('click', async () => {
+      let val = Math.min(480, currentYtTimeLimit + 5);
+      currentYtTimeLimit = val;
+      await chrome.storage.local.set({ youtubeTimeLimitMinutes: val });
+      updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
+    });
+  }
+
+  if (btnResetYtTime) {
+    btnResetYtTime.addEventListener('click', async () => {
+      if (confirm("Reset today's YouTube screen time back to 0?")) {
+        currentTodayYtSeconds = 0;
+        await chrome.storage.local.set({ todayYouTubeSeconds: 0 });
+        updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, 0);
+      }
+    });
+  }
+
+  if (ytTimeChips) {
+    ytTimeChips.forEach(chip => {
+      chip.addEventListener('click', async () => {
+        const val = Number(chip.dataset.time);
+        if (val) {
+          currentYtTimeLimit = val;
+          await chrome.storage.local.set({ youtubeTimeLimitMinutes: val });
+          updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
+        }
+      });
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      if (confirm("Reset total protected reels count back to 0?")) {
+        currentSkippedCount = 0;
+        currentIgSkipped = 0;
+        currentYtSkipped = 0;
+        await chrome.storage.local.set({
+          skippedCount: 0,
+          instagramSkippedCount: 0,
+          youtubeSkippedCount: 0,
+          seenProtectedReels: {}
+        });
+        updatePlatformCountsUI(0, 0, 0, currentTodayIg, currentTodayYt);
+      }
+    });
+  }
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
 
-    if (changes.skippedCount) {
-      skippedCountEl.textContent = (changes.skippedCount.newValue || 0).toLocaleString();
+    if (changes.skippedCount !== undefined || changes.instagramSkippedCount !== undefined || changes.youtubeSkippedCount !== undefined) {
+      if (changes.skippedCount !== undefined) currentSkippedCount = changes.skippedCount.newValue || 0;
+      if (changes.instagramSkippedCount !== undefined) currentIgSkipped = changes.instagramSkippedCount.newValue || 0;
+      if (changes.youtubeSkippedCount !== undefined) currentYtSkipped = changes.youtubeSkippedCount.newValue || 0;
+      updatePlatformCountsUI(currentSkippedCount, currentIgSkipped, currentYtSkipped, currentTodayIg, currentTodayYt);
     }
+
     if (changes.physicalList) {
       updateCacheStats(changes.physicalList.newValue || {});
     }
-    if (changes.dailyLimitEnabled !== undefined || changes.dailyScrollLimit !== undefined || changes.todayScrollCount !== undefined) {
+
+    if (changes.dailyLimitEnabled !== undefined || changes.dailyScrollLimit !== undefined || changes.todayScrollCount !== undefined || changes.todayInstagramScrollCount !== undefined || changes.todayYouTubeScrollCount !== undefined) {
       if (changes.dailyLimitEnabled !== undefined) currentDailyLimitEnabled = changes.dailyLimitEnabled.newValue;
       if (changes.dailyScrollLimit !== undefined) currentDailyLimit = changes.dailyScrollLimit.newValue;
-      if (changes.todayScrollCount !== undefined) currentTodayCount = changes.todayScrollCount.newValue;
-      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount);
+      if (changes.todayScrollCount !== undefined) currentTodayCount = changes.todayScrollCount.newValue || 0;
+      if (changes.todayInstagramScrollCount !== undefined) currentTodayIg = changes.todayInstagramScrollCount.newValue || 0;
+      if (changes.todayYouTubeScrollCount !== undefined) currentTodayYt = changes.todayYouTubeScrollCount.newValue || 0;
+      updateDailyLimitUI(currentDailyLimitEnabled, currentDailyLimit, currentTodayCount, currentTodayIg, currentTodayYt);
+      updatePlatformCountsUI(currentSkippedCount, currentIgSkipped, currentYtSkipped, currentTodayIg, currentTodayYt);
+    }
+
+    if (changes.youtubeTimeLimitEnabled !== undefined || changes.youtubeTimeLimitMinutes !== undefined || changes.todayYouTubeSeconds !== undefined) {
+      if (changes.youtubeTimeLimitEnabled !== undefined) currentYtTimeLimitEnabled = changes.youtubeTimeLimitEnabled.newValue;
+      if (changes.youtubeTimeLimitMinutes !== undefined) currentYtTimeLimit = changes.youtubeTimeLimitMinutes.newValue;
+      if (changes.todayYouTubeSeconds !== undefined) currentTodayYtSeconds = changes.todayYouTubeSeconds.newValue || 0;
+      updateYouTubeTimeUI(currentYtTimeLimitEnabled, currentYtTimeLimit, currentTodayYtSeconds);
     }
   });
 });

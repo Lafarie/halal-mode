@@ -73,9 +73,15 @@ body {
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card-main {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .stat-info {
@@ -97,6 +103,54 @@ body {
   color: #FFFFFF;
   line-height: 1.1;
   margin-top: 2px;
+}
+
+.platform-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.platform-stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.platform-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.platform-dot.ig {
+  background: #E1306C;
+  box-shadow: 0 0 6px #E1306C;
+}
+
+.platform-dot.yt {
+  background: #FF0000;
+  box-shadow: 0 0 6px #FF0000;
+}
+
+.platform-label {
+  color: #E2E8F0;
+  font-weight: 500;
+  flex: 1;
+}
+
+.platform-count {
+  font-weight: 700;
+  color: #FFFFFF;
+  font-size: 12px;
 }
 
 .reset-btn {
@@ -206,6 +260,30 @@ body {
 .limit-progress-stat {
   font-weight: 700;
   color: #F8FAFC;
+}
+
+.limit-platform-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin: 1px 0 3px 0;
+}
+
+.platform-sub-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.platform-sub-tag strong {
+  color: #34D399;
+  font-weight: 700;
+}
+
+.platform-sub-dot {
+  opacity: 0.4;
 }
 
 .limit-progress-track {
@@ -350,6 +428,57 @@ body {
   background: rgba(16, 185, 129, 0.2);
   border-color: var(--emerald-500);
   color: #34D399;
+}
+
+/* YouTube Time Limiter Card */
+.yt-time-card {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: linear-gradient(180deg, #182234 0%, #1e1b29 100%);
+}
+
+.limit-icon.yt-icon {
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+}
+
+.limit-status-pill.yt-pill {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #F87171;
+}
+
+.limit-status-pill.yt-pill.active {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #F87171;
+}
+
+.limit-status-pill.yt-pill.disabled {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94A3B8;
+}
+
+.limit-progress-bar.yt-progress-fill {
+  background: linear-gradient(90deg, #F87171 0%, #EF4444 100%);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+.stepper-unit {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.limit-chip.yt-time-chip:hover {
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
+.limit-chip.yt-time-chip.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #FCA5A5;
 }
 
 /* Settings Sections */

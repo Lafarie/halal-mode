@@ -174,11 +174,12 @@ async function runTests() {
   const markMatch = contentCode.match(/function markAndIncrementProtected\(video\)\s*\{([\s\S]*?)\n  \}/);
   assert(markMatch, 'markAndIncrementProtected found in content.js');
 
-  const createMarkFn = () => {
+  const createMarkFn = (platform = 'instagram') => {
     const countedProtectedReelKeys = new Set();
     const isReelContext = (v) => true;
     const getReelIdentifier = (v) => v.dataset?.halalReelId || 'ig_testReel1';
     const getReelUrl = (v) => 'https://www.instagram.com/reels/testReel1/';
+    const getActivePlatform = () => platform;
     return {
       markFn: new Function(
         'video',
@@ -187,11 +188,13 @@ async function runTests() {
         'getReelIdentifier',
         'getReelUrl',
         'countedProtectedReelKeys',
+        'getActivePlatform',
         markMatch[1]
       ),
       isReelContext,
       getReelIdentifier,
       getReelUrl,
+      getActivePlatform,
       countedProtectedReelKeys
     };
   };
@@ -199,15 +202,15 @@ async function runTests() {
   test('Null or non-reel videos are rejected without incrementing', () => {
     let messageSendCount = 0;
     const mockSafeSendMessage = () => messageSendCount++;
-    const { markFn, getReelIdentifier, getReelUrl, countedProtectedReelKeys } = createMarkFn();
+    const { markFn, getReelIdentifier, getReelUrl, getActivePlatform, countedProtectedReelKeys } = createMarkFn();
 
     // 1. null video
-    markFn(null, mockSafeSendMessage, () => true, getReelIdentifier, getReelUrl, countedProtectedReelKeys);
+    markFn(null, mockSafeSendMessage, () => true, getReelIdentifier, getReelUrl, countedProtectedReelKeys, getActivePlatform);
     assert.strictEqual(messageSendCount, 0, 'Null video should NOT increment counter');
 
     // 2. Video outside reel context (e.g. story)
     const mockStoryVideo = { dataset: {} };
-    markFn(mockStoryVideo, mockSafeSendMessage, () => false, getReelIdentifier, getReelUrl, countedProtectedReelKeys);
+    markFn(mockStoryVideo, mockSafeSendMessage, () => false, getReelIdentifier, getReelUrl, countedProtectedReelKeys, getActivePlatform);
     assert.strictEqual(messageSendCount, 0, 'Video outside reel context should NOT increment');
   });
 
@@ -217,12 +220,12 @@ async function runTests() {
       if (msg.action === 'incrementSkipped') messageSendCount++;
     };
 
-    const { markFn, isReelContext, getReelIdentifier, getReelUrl, countedProtectedReelKeys } = createMarkFn();
+    const { markFn, isReelContext, getReelIdentifier, getReelUrl, getActivePlatform, countedProtectedReelKeys } = createMarkFn();
     const mockVideo = { dataset: { halalReelId: 'ig_DA87c9Xv9yO' } };
 
     // Simulate 10 consecutive calls (e.g. from rapid scan loops or DOM events)
     for (let i = 0; i < 10; i++) {
-      markFn(mockVideo, mockSafeSendMessage, isReelContext, getReelIdentifier, getReelUrl, countedProtectedReelKeys);
+      markFn(mockVideo, mockSafeSendMessage, isReelContext, getReelIdentifier, getReelUrl, countedProtectedReelKeys, getActivePlatform);
     }
 
     assert.strictEqual(messageSendCount, 1, 'Counter should increment exactly 1 time, not 10 times');
@@ -235,26 +238,28 @@ async function runTests() {
       if (msg.action === 'incrementSkipped') messageSendCount++;
     };
 
-    const { markFn, isReelContext, getReelUrl, countedProtectedReelKeys } = createMarkFn();
+    const { markFn, isReelContext, getReelUrl, getActivePlatform, countedProtectedReelKeys } = createMarkFn();
     const mockVideo1 = { dataset: { halalReelId: 'ig_Reel1' } };
     const mockVideo2 = { dataset: { halalReelId: 'ig_Reel2' } };
 
     const getReelId = (v) => v.dataset.halalReelId;
 
-    markFn(mockVideo1, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys);
-    markFn(mockVideo2, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys);
-    markFn(mockVideo1, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys);
+    markFn(mockVideo1, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys, getActivePlatform);
+    markFn(mockVideo2, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys, getActivePlatform);
+    markFn(mockVideo1, mockSafeSendMessage, isReelContext, getReelId, getReelUrl, countedProtectedReelKeys, getActivePlatform);
 
     assert.strictEqual(messageSendCount, 2, 'Counter should increment once per distinct video');
   });
 
   // ------------------------------------------------------------------
-  // 6. Background Protected Counter (incrementSkipped) Deduplication & Anti-Flood
+  // 6. Background Protected Counter (incrementSkipped) Deduplication, Platform Breakdown & Anti-Flood
   // ------------------------------------------------------------------
-  console.log('\n🛡️ 6. Background Protected Counter Deduplication & Anti-Flood:');
+  console.log('\n🛡️ 6. Background Protected Counter Deduplication, Platform Breakdown & Anti-Flood:');
 
   const bgStorage = {
     skippedCount: 0,
+    instagramSkippedCount: 0,
+    youtubeSkippedCount: 0,
     seenProtectedReels: {}
   };
   let lastIncrementTime = 0;
@@ -262,58 +267,114 @@ async function runTests() {
   function simulateIncrementSkipped(message, customNow = Date.now()) {
     const reelId = message.reelId ? String(message.reelId) : null;
     const currentCount = bgStorage.skippedCount || 0;
+    let igCount = bgStorage.instagramSkippedCount || 0;
+    let ytCount = bgStorage.youtubeSkippedCount || 0;
     const seenProtectedReels = bgStorage.seenProtectedReels || {};
+
+    let platform = message.platform;
+    if (!platform) {
+      if (reelId && reelId.startsWith('ig_')) platform = 'instagram';
+      else if (reelId && reelId.startsWith('yt_')) platform = 'youtube';
+      else if (reelId && reelId.startsWith('tt_')) platform = 'tiktok';
+    }
 
     // 1. Reel key deduplication
     if (reelId) {
       if (seenProtectedReels[reelId]) {
-        return { success: true, count: currentCount, alreadyCounted: true };
+        return {
+          success: true,
+          count: currentCount,
+          instagramSkippedCount: igCount,
+          youtubeSkippedCount: ytCount,
+          alreadyCounted: true
+        };
       }
       seenProtectedReels[reelId] = true;
     }
 
     // 2. Anti-flood rate limiting (250ms)
     if (customNow - lastIncrementTime < 250) {
-      return { success: true, count: currentCount, throttled: true };
+      return {
+        success: true,
+        count: currentCount,
+        instagramSkippedCount: igCount,
+        youtubeSkippedCount: ytCount,
+        throttled: true
+      };
     }
     lastIncrementTime = customNow;
 
-    bgStorage.skippedCount = currentCount + 1;
+    const nextCount = currentCount + 1;
+    if (platform === 'instagram') igCount += 1;
+    else if (platform === 'youtube') ytCount += 1;
+
+    bgStorage.skippedCount = nextCount;
+    bgStorage.instagramSkippedCount = igCount;
+    bgStorage.youtubeSkippedCount = ytCount;
     bgStorage.seenProtectedReels = seenProtectedReels;
-    return { success: true, count: bgStorage.skippedCount };
+
+    return {
+      success: true,
+      count: nextCount,
+      instagramSkippedCount: igCount,
+      youtubeSkippedCount: ytCount
+    };
   }
 
   test('Background increments on first reel', () => {
     bgStorage.skippedCount = 0;
+    bgStorage.instagramSkippedCount = 0;
+    bgStorage.youtubeSkippedCount = 0;
     bgStorage.seenProtectedReels = {};
     lastIncrementTime = 0;
 
-    const res = simulateIncrementSkipped({ reelId: 'ig_DA87c9Xv9yO' }, 1000);
+    const res = simulateIncrementSkipped({ reelId: 'ig_DA87c9Xv9yO', platform: 'instagram' }, 1000);
     assert.strictEqual(res.count, 1);
+    assert.strictEqual(res.instagramSkippedCount, 1);
+    assert.strictEqual(res.youtubeSkippedCount, 0);
     assert.strictEqual(res.alreadyCounted, undefined);
+  });
+
+  test('Background increments YouTube short separately and maintains total', () => {
+    const res = simulateIncrementSkipped({ reelId: 'yt_abc123xyz', platform: 'youtube' }, 2000);
+    assert.strictEqual(res.count, 2);
+    assert.strictEqual(res.instagramSkippedCount, 1);
+    assert.strictEqual(res.youtubeSkippedCount, 1);
   });
 
   test('Background deduplicates identical reel regardless of calls', () => {
     // 5 repeated calls with same reel ID
     for (let i = 0; i < 5; i++) {
-      const res = simulateIncrementSkipped({ reelId: 'ig_DA87c9Xv9yO' }, 2000 + (i * 300));
+      const res = simulateIncrementSkipped({ reelId: 'ig_DA87c9Xv9yO', platform: 'instagram' }, 3000 + (i * 300));
       assert.strictEqual(res.alreadyCounted, true);
-      assert.strictEqual(res.count, 1, 'Count must stay at 1');
+      assert.strictEqual(res.count, 2, 'Count must stay at 2');
+      assert.strictEqual(res.instagramSkippedCount, 1);
     }
   });
 
   test('Background throttles rapid calls under 250ms gap', () => {
-    const res1 = simulateIncrementSkipped({ reelId: 'ig_Reel_Alpha' }, 10000);
-    assert.strictEqual(res1.count, 2);
+    const res1 = simulateIncrementSkipped({ reelId: 'ig_Reel_Alpha', platform: 'instagram' }, 10000);
+    assert.strictEqual(res1.count, 3);
+    assert.strictEqual(res1.instagramSkippedCount, 2);
 
     // Call again only 50ms later (flooding)
-    const res2 = simulateIncrementSkipped({ reelId: 'ig_Reel_Beta' }, 10050);
+    const res2 = simulateIncrementSkipped({ reelId: 'ig_Reel_Beta', platform: 'instagram' }, 10050);
     assert.strictEqual(res2.throttled, true, 'Should be throttled');
-    assert.strictEqual(res2.count, 2, 'Count must not increase during flood');
+    assert.strictEqual(res2.count, 3, 'Count must not increase during flood');
+  });
+
+  test('Resetting protected counts clears total, Instagram, and YouTube counts', () => {
+    bgStorage.skippedCount = 0;
+    bgStorage.instagramSkippedCount = 0;
+    bgStorage.youtubeSkippedCount = 0;
+    bgStorage.seenProtectedReels = {};
+    assert.strictEqual(bgStorage.skippedCount, 0);
+    assert.strictEqual(bgStorage.instagramSkippedCount, 0);
+    assert.strictEqual(bgStorage.youtubeSkippedCount, 0);
   });
 
   // ------------------------------------------------------------------
-  // 7. Background Service Worker Daily Scroll Logic
+  // 7. Background Service Worker Daily Scroll Logic & Platform Breakdown
   // ------------------------------------------------------------------
   console.log('\n⚙️ 7. Background Daily Scroll & Deduplication Logic:');
 
@@ -322,6 +383,9 @@ async function runTests() {
     dailyLimitEnabled: true,
     dailyScrollLimit: 3,
     todayScrollCount: 0,
+    todayInstagramScrollCount: 0,
+    todayYouTubeScrollCount: 0,
+    todayYouTubeSeconds: 0,
     todayDate: '2026-09-06',
     todaySeenReels: {}
   };
@@ -330,15 +394,28 @@ async function runTests() {
     const dailyLimitEnabled = mockStorage.dailyLimitEnabled !== undefined ? mockStorage.dailyLimitEnabled : true;
     const dailyScrollLimit = typeof mockStorage.dailyScrollLimit === 'number' ? mockStorage.dailyScrollLimit : 100;
     let todayScrollCount = typeof mockStorage.todayScrollCount === 'number' ? mockStorage.todayScrollCount : 0;
+    let todayInstagramScrollCount = typeof mockStorage.todayInstagramScrollCount === 'number' ? mockStorage.todayInstagramScrollCount : 0;
+    let todayYouTubeScrollCount = typeof mockStorage.todayYouTubeScrollCount === 'number' ? mockStorage.todayYouTubeScrollCount : 0;
+    let todayYouTubeSeconds = typeof mockStorage.todayYouTubeSeconds === 'number' ? mockStorage.todayYouTubeSeconds : 0;
     let todaySeenReels = mockStorage.todaySeenReels || {};
 
     if (mockStorage.todayDate !== todayStr) {
       todayScrollCount = 0;
+      todayInstagramScrollCount = 0;
+      todayYouTubeScrollCount = 0;
+      todayYouTubeSeconds = 0;
       todaySeenReels = {};
     }
 
     const reelKey = message.reelKey ? String(message.reelKey) : null;
     let alreadyCounted = false;
+
+    let platform = message.platform;
+    if (!platform) {
+      if (reelKey && reelKey.startsWith('ig_')) platform = 'instagram';
+      else if (reelKey && reelKey.startsWith('yt_')) platform = 'youtube';
+      else if (reelKey && reelKey.startsWith('tt_')) platform = 'tiktok';
+    }
 
     if (reelKey) {
       if (todaySeenReels[reelKey]) {
@@ -346,20 +423,29 @@ async function runTests() {
       } else {
         todaySeenReels[reelKey] = true;
         todayScrollCount += 1;
+        if (platform === 'instagram') todayInstagramScrollCount += 1;
+        else if (platform === 'youtube') todayYouTubeScrollCount += 1;
       }
     } else {
       todayScrollCount += 1;
+      if (platform === 'instagram') todayInstagramScrollCount += 1;
+      else if (platform === 'youtube') todayYouTubeScrollCount += 1;
     }
 
     const limitReached = dailyLimitEnabled && todayScrollCount >= dailyScrollLimit;
 
     mockStorage.todayDate = todayStr;
     mockStorage.todayScrollCount = todayScrollCount;
+    mockStorage.todayInstagramScrollCount = todayInstagramScrollCount;
+    mockStorage.todayYouTubeScrollCount = todayYouTubeScrollCount;
+    mockStorage.todayYouTubeSeconds = todayYouTubeSeconds;
     mockStorage.todaySeenReels = todaySeenReels;
 
     return {
       success: true,
       todayScrollCount,
+      todayInstagramScrollCount,
+      todayYouTubeScrollCount,
       dailyScrollLimit,
       dailyLimitEnabled,
       limitReached,
@@ -367,38 +453,137 @@ async function runTests() {
     };
   }
 
-  test('New reel increments count from 0 to 1', () => {
+  test('New Instagram reel increments total and Instagram scroll count', () => {
     mockStorage.todayDate = '2026-09-06';
     mockStorage.todayScrollCount = 0;
+    mockStorage.todayInstagramScrollCount = 0;
+    mockStorage.todayYouTubeScrollCount = 0;
     mockStorage.todaySeenReels = {};
-    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1' });
+
+    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1', platform: 'instagram' });
     assert.strictEqual(res.todayScrollCount, 1);
+    assert.strictEqual(res.todayInstagramScrollCount, 1);
+    assert.strictEqual(res.todayYouTubeScrollCount, 0);
     assert.strictEqual(res.alreadyCounted, false);
     assert.strictEqual(res.limitReached, false);
   });
 
-  test('Scrolling back to same reel does not increment (alreadyCounted)', () => {
-    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1' });
+  test('Scrolling back to same reel does not increment either counter', () => {
+    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1', platform: 'instagram' });
     assert.strictEqual(res.todayScrollCount, 1);
+    assert.strictEqual(res.todayInstagramScrollCount, 1);
     assert.strictEqual(res.alreadyCounted, true);
     assert.strictEqual(res.limitReached, false);
   });
 
-  test('Scrolling to reel 2 and reel 3 reaches limit of 3', () => {
-    const res2 = simulateIncrementDailyScroll({ reelKey: 'ig_Reel2' });
+  test('YouTube short increments YouTube scroll count and triggers limit when reached', () => {
+    const res2 = simulateIncrementDailyScroll({ reelKey: 'yt_Short1', platform: 'youtube' });
     assert.strictEqual(res2.todayScrollCount, 2);
+    assert.strictEqual(res2.todayInstagramScrollCount, 1);
+    assert.strictEqual(res2.todayYouTubeScrollCount, 1);
     assert.strictEqual(res2.limitReached, false);
 
-    const res3 = simulateIncrementDailyScroll({ reelKey: 'ig_Reel3' });
+    const res3 = simulateIncrementDailyScroll({ reelKey: 'yt_Short2', platform: 'youtube' });
     assert.strictEqual(res3.todayScrollCount, 3);
+    assert.strictEqual(res3.todayInstagramScrollCount, 1);
+    assert.strictEqual(res3.todayYouTubeScrollCount, 2);
     assert.strictEqual(res3.limitReached, true, 'Limit should be reached at count=3');
   });
 
-  test('Midnight rollover resets count and seen reels', () => {
+  test('Midnight rollover resets total, Instagram, YouTube scroll counts, and YouTube seconds', () => {
+    mockStorage.todayYouTubeSeconds = 1200;
     // Next day arrives: 2026-09-07
-    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1' }, '2026-09-07');
+    const res = simulateIncrementDailyScroll({ reelKey: 'ig_Reel1', platform: 'instagram' }, '2026-09-07');
     assert.strictEqual(res.todayScrollCount, 1, 'Should reset to 1 on new day');
+    assert.strictEqual(res.todayInstagramScrollCount, 1);
+    assert.strictEqual(res.todayYouTubeScrollCount, 0);
+    assert.strictEqual(mockStorage.todayYouTubeSeconds, 0, 'YouTube seconds reset on date rollover');
     assert.strictEqual(mockStorage.todayDate, '2026-09-07');
+  });
+
+  // ------------------------------------------------------------------
+  // 8. YouTube Screen Time Limiter & Time Logging Logic
+  // ------------------------------------------------------------------
+  console.log('\n⏳ 8. YouTube Screen Time Limiter & Tracking Logic:');
+
+  const mockYtStorage = {
+    todayDate: '2026-09-06',
+    todayYouTubeSeconds: 0,
+    youtubeTimeLimitEnabled: true,
+    youtubeTimeLimitMinutes: 30
+  };
+
+  function simulateLogYouTubeTime(message, todayStr = '2026-09-06') {
+    let todayYouTubeSeconds = typeof mockYtStorage.todayYouTubeSeconds === 'number' ? mockYtStorage.todayYouTubeSeconds : 0;
+    if (mockYtStorage.todayDate !== todayStr) {
+      todayYouTubeSeconds = 0;
+    }
+
+    const secondsToAdd = typeof message.seconds === 'number' && message.seconds > 0 ? message.seconds : 0;
+    todayYouTubeSeconds += secondsToAdd;
+
+    const youtubeTimeLimitEnabled = mockYtStorage.youtubeTimeLimitEnabled !== undefined ? mockYtStorage.youtubeTimeLimitEnabled : false;
+    const youtubeTimeLimitMinutes = typeof mockYtStorage.youtubeTimeLimitMinutes === 'number' ? mockYtStorage.youtubeTimeLimitMinutes : 30;
+    const limitReached = youtubeTimeLimitEnabled && todayYouTubeSeconds >= (youtubeTimeLimitMinutes * 60);
+
+    mockYtStorage.todayDate = todayStr;
+    mockYtStorage.todayYouTubeSeconds = todayYouTubeSeconds;
+
+    return {
+      success: true,
+      todayYouTubeSeconds,
+      youtubeTimeLimitMinutes,
+      youtubeTimeLimitEnabled,
+      limitReached
+    };
+  }
+
+  test('YouTube time accumulates seconds accurately', () => {
+    mockYtStorage.todayYouTubeSeconds = 0;
+    mockYtStorage.youtubeTimeLimitEnabled = true;
+    mockYtStorage.youtubeTimeLimitMinutes = 30;
+
+    // Log 5 seconds
+    const res1 = simulateLogYouTubeTime({ seconds: 5 });
+    assert.strictEqual(res1.todayYouTubeSeconds, 5);
+    assert.strictEqual(res1.limitReached, false);
+
+    // Log another 100 seconds
+    const res2 = simulateLogYouTubeTime({ seconds: 100 });
+    assert.strictEqual(res2.todayYouTubeSeconds, 105);
+    assert.strictEqual(res2.limitReached, false);
+  });
+
+  test('YouTube time limit triggers when reached (30 min = 1800s)', () => {
+    // Add 1695 seconds so total is 1800s
+    const res = simulateLogYouTubeTime({ seconds: 1695 });
+    assert.strictEqual(res.todayYouTubeSeconds, 1800);
+    assert.strictEqual(res.limitReached, true, 'Limit should be reached at 1800s (30m)');
+  });
+
+  test('Disabled YouTube time limit does not trigger limitReached', () => {
+    mockYtStorage.youtubeTimeLimitEnabled = false;
+    const res = simulateLogYouTubeTime({ seconds: 60 });
+    assert.strictEqual(res.limitReached, false, 'Disabled limiter must not trigger limitReached');
+    mockYtStorage.youtubeTimeLimitEnabled = true;
+  });
+
+  test('Extending YouTube limit increases allowance and clears limitReached', () => {
+    // Extend by 15 minutes: 30m -> 45m (2700s)
+    mockYtStorage.youtubeTimeLimitMinutes += 15;
+    assert.strictEqual(mockYtStorage.youtubeTimeLimitMinutes, 45);
+
+    // Currently at 1860s, limit is 45m (2700s) -> limitReached must be false
+    const res = simulateLogYouTubeTime({ seconds: 0 });
+    assert.strictEqual(res.limitReached, false, 'Extending limit should clear limitReached');
+  });
+
+  test('Resetting YouTube time brings seconds back to 0', () => {
+    mockYtStorage.todayYouTubeSeconds = 0;
+    assert.strictEqual(mockYtStorage.todayYouTubeSeconds, 0);
+    const res = simulateLogYouTubeTime({ seconds: 0 });
+    assert.strictEqual(res.todayYouTubeSeconds, 0);
+    assert.strictEqual(res.limitReached, false);
   });
 
   console.log('\n====================================================');

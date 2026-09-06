@@ -25,11 +25,27 @@
 
     <!-- Stat Counter Card -->
     <div class="stat-card">
-      <div class="stat-info">
-        <span class="stat-label">Protected Reels</span>
-        <span class="stat-number" id="skippedCount">0</span>
+      <div class="stat-card-main">
+        <div class="stat-info">
+          <span class="stat-label">Total Protected Reels</span>
+          <span class="stat-number" id="skippedCount">0</span>
+        </div>
+        <button class="reset-btn" id="resetBtn" title="Reset Counter">Reset</button>
       </div>
-      <button class="reset-btn" id="resetBtn" title="Reset Counter">Reset</button>
+
+      <!-- Platform Separate Counts -->
+      <div class="platform-stats-row">
+        <div class="platform-stat-badge ig" title="Instagram Reels Protected">
+          <span class="platform-dot ig"></span>
+          <span class="platform-label">Instagram:</span>
+          <strong class="platform-count" id="igSkippedCount">0</strong>
+        </div>
+        <div class="platform-stat-badge yt" title="YouTube Shorts Protected">
+          <span class="platform-dot yt"></span>
+          <span class="platform-label">YouTube:</span>
+          <strong class="platform-count" id="ytSkippedCount">0</strong>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Reel Controls for Active Tab -->
@@ -77,6 +93,11 @@
           <span class="limit-progress-label">Today's Usage:</span>
           <span class="limit-progress-stat" id="limitProgressStat">0 / 100 Reels</span>
         </div>
+        <div class="limit-platform-breakdown">
+          <span class="platform-sub-tag">📷 Instagram: <strong id="todayIgScrollCount">0</strong></span>
+          <span class="platform-sub-dot">•</span>
+          <span class="platform-sub-tag">▶️ YouTube: <strong id="todayYtScrollCount">0</strong></span>
+        </div>
         <div class="limit-progress-track">
           <div class="limit-progress-bar" id="limitProgressBar" style="width: 0%;"></div>
         </div>
@@ -104,6 +125,62 @@
         <button type="button" class="limit-chip" data-limit="150">150</button>
         <button type="button" class="limit-chip" data-limit="200">200</button>
         <button type="button" class="limit-chip" data-limit="300">300</button>
+      </div>
+    </div>
+
+    <!-- YouTube Time Limiter Card -->
+    <div class="limit-card yt-time-card">
+      <div class="limit-header-row">
+        <div class="limit-title-group">
+          <span class="limit-icon yt-icon">⏳</span>
+          <div>
+            <div class="limit-title-row">
+              <span class="limit-title">YouTube Time Limit</span>
+              <span class="limit-status-pill yt-pill" id="ytTimeStatusPill">Off</span>
+            </div>
+            <p class="limit-subtitle">Daily YouTube screen time limiter</p>
+          </div>
+        </div>
+        <label class="switch" title="Toggle YouTube Time Limit">
+          <input type="checkbox" id="ytTimeLimitToggle">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <!-- Today's YouTube Usage Progress Bar -->
+      <div class="limit-progress-wrapper" id="ytTimeProgressWrapper">
+        <div class="limit-progress-header">
+          <span class="limit-progress-label">Today on YouTube:</span>
+          <span class="limit-progress-stat" id="ytTimeProgressStat">0m / 30m</span>
+        </div>
+        <div class="limit-progress-track">
+          <div class="limit-progress-bar yt-progress-fill" id="ytTimeProgressBar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- YouTube Time Stepper & Reset Row -->
+      <div class="limit-controls-row" id="ytTimeControlsRow">
+        <div class="stepper-group">
+          <span class="stepper-label">Max / Day:</span>
+          <div class="stepper-box">
+            <button type="button" class="btn-stepper" id="btnYtTimeMinus" title="Decrease by 5 mins">−</button>
+            <input type="number" id="ytTimeLimitInput" class="limit-number-input" min="5" max="480" step="5" value="30">
+            <span class="stepper-unit">min</span>
+            <button type="button" class="btn-stepper" id="btnYtTimePlus" title="Increase by 5 mins">+</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn-reset-today" id="btnResetYtTime" title="Reset today's YouTube time back to 0">Reset Today</button>
+      </div>
+
+      <!-- Quick Preset Chips for YouTube Time -->
+      <div class="limit-chips-row" id="ytTimeChipsRow">
+        <span class="chips-label">Presets:</span>
+        <button type="button" class="limit-chip yt-time-chip" data-time="15">15m</button>
+        <button type="button" class="limit-chip yt-time-chip active" data-time="30">30m</button>
+        <button type="button" class="limit-chip yt-time-chip" data-time="45">45m</button>
+        <button type="button" class="limit-chip yt-time-chip" data-time="60">60m</button>
+        <button type="button" class="limit-chip yt-time-chip" data-time="90">90m</button>
       </div>
     </div>
 

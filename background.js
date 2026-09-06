@@ -21,13 +21,20 @@ const DEFAULT_SETTINGS = {
   dailyLimitEnabled: true,     // Mindful daily scroll limit
   dailyScrollLimit: 100,       // Default 100 reels per day
   todayScrollCount: 0,         // Counter for today
+  todayInstagramScrollCount: 0,// Instagram reels scrolled today
+  todayYouTubeScrollCount: 0,  // YouTube shorts scrolled today
   todayDate: getTodayDateString(),
   todaySeenReels: {},          // Unique reel IDs counted today
+  todayYouTubeSeconds: 0,      // Seconds spent using YouTube today
+  youtubeTimeLimitEnabled: false, // Optional daily YouTube time limit
+  youtubeTimeLimitMinutes: 30, // Default 30 min limit when enabled
   cornerTolerance: 0,     // 0 = Strict (No girls anywhere on screen), 50 = Corner OK, up to 100
   sensitivity: 65,
   scanIntervalMs: 800,
   showToast: true,
   skippedCount: 0,
+  instagramSkippedCount: 0,    // Total protected reels on Instagram
+  youtubeSkippedCount: 0,      // Total protected shorts on YouTube
   seenProtectedReels: {},      // Unique reel IDs counted as protected (prevents runaway loops)
   physicalList: {},       // Permanent registry of scanned reels (Reel ID -> verdict & metadata)
   platforms: {
@@ -273,14 +280,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const now = Date.now();
         const reelId = message.reelId ? String(message.reelId) : null;
 
-        const data = await chrome.storage.local.get(['skippedCount', 'seenProtectedReels']);
+        const data = await chrome.storage.local.get([
+          'skippedCount',
+          'instagramSkippedCount',
+          'youtubeSkippedCount',
+          'seenProtectedReels'
+        ]);
         const currentCount = typeof data.skippedCount === 'number' ? data.skippedCount : 0;
+        let instagramSkippedCount = typeof data.instagramSkippedCount === 'number' ? data.instagramSkippedCount : 0;
+        let youtubeSkippedCount = typeof data.youtubeSkippedCount === 'number' ? data.youtubeSkippedCount : 0;
         let seenProtectedReels = data.seenProtectedReels || {};
 
         // 1. Reel key deduplication: if this reel was already counted as protected, do NOT count it again!
         if (reelId) {
           if (seenProtectedReels[reelId]) {
-            sendResponse({ success: true, count: currentCount, alreadyCounted: true });
+            sendResponse({
+              success: true,
+              count: currentCount,
+              instagramSkippedCount,
+              youtubeSkippedCount,
+              alreadyCounted: true
+            });
             return;
           }
           seenProtectedReels[reelId] = true;
@@ -288,23 +308,70 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         // 2. Anti-flood rate limiting: never allow more than 1 increment per 250ms
         if (now - lastIncrementSkippedTime < 250) {
-          sendResponse({ success: true, count: currentCount, throttled: true });
+          sendResponse({
+            success: true,
+            count: currentCount,
+            instagramSkippedCount,
+            youtubeSkippedCount,
+            throttled: true
+          });
           return;
         }
         lastIncrementSkippedTime = now;
 
+        // Determine platform
+        let platform = message.platform;
+        if (!platform) {
+          if (reelId && reelId.startsWith('ig_')) platform = 'instagram';
+          else if (reelId && reelId.startsWith('yt_')) platform = 'youtube';
+          else if (reelId && reelId.startsWith('tt_')) platform = 'tiktok';
+          else if (message.url && message.url.includes('instagram.com')) platform = 'instagram';
+          else if (message.url && message.url.includes('youtube.com')) platform = 'youtube';
+          else if (message.url && message.url.includes('tiktok.com')) platform = 'tiktok';
+        }
+
         const nextCount = currentCount + 1;
+        if (platform === 'instagram') {
+          instagramSkippedCount += 1;
+        } else if (platform === 'youtube') {
+          youtubeSkippedCount += 1;
+        }
+
         await chrome.storage.local.set({
           skippedCount: nextCount,
+          instagramSkippedCount,
+          youtubeSkippedCount,
           seenProtectedReels
         });
-        sendResponse({ success: true, count: nextCount });
+        sendResponse({
+          success: true,
+          count: nextCount,
+          instagramSkippedCount,
+          youtubeSkippedCount
+        });
+      } else if (message.action === 'resetSkippedCount') {
+        await chrome.storage.local.set({
+          skippedCount: 0,
+          instagramSkippedCount: 0,
+          youtubeSkippedCount: 0,
+          seenProtectedReels: {}
+        });
+        await updateBadge(true, 0);
+        sendResponse({
+          success: true,
+          count: 0,
+          instagramSkippedCount: 0,
+          youtubeSkippedCount: 0
+        });
       } else if (message.action === 'incrementDailyScroll') {
         const todayStr = getTodayDateString();
         const data = await chrome.storage.local.get([
           'dailyLimitEnabled',
           'dailyScrollLimit',
           'todayScrollCount',
+          'todayInstagramScrollCount',
+          'todayYouTubeScrollCount',
+          'todayYouTubeSeconds',
           'todayDate',
           'todaySeenReels'
         ]);
@@ -312,15 +379,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const dailyLimitEnabled = data.dailyLimitEnabled !== undefined ? data.dailyLimitEnabled : true;
         const dailyScrollLimit = typeof data.dailyScrollLimit === 'number' ? data.dailyScrollLimit : 100;
         let todayScrollCount = typeof data.todayScrollCount === 'number' ? data.todayScrollCount : 0;
+        let todayInstagramScrollCount = typeof data.todayInstagramScrollCount === 'number' ? data.todayInstagramScrollCount : 0;
+        let todayYouTubeScrollCount = typeof data.todayYouTubeScrollCount === 'number' ? data.todayYouTubeScrollCount : 0;
+        let todayYouTubeSeconds = typeof data.todayYouTubeSeconds === 'number' ? data.todayYouTubeSeconds : 0;
         let todaySeenReels = data.todaySeenReels || {};
 
         if (data.todayDate !== todayStr) {
           todayScrollCount = 0;
+          todayInstagramScrollCount = 0;
+          todayYouTubeScrollCount = 0;
+          todayYouTubeSeconds = 0;
           todaySeenReels = {};
         }
 
         const reelKey = message.reelKey ? String(message.reelKey) : null;
         let alreadyCounted = false;
+
+        // Determine platform
+        let platform = message.platform;
+        if (!platform) {
+          if (reelKey && reelKey.startsWith('ig_')) platform = 'instagram';
+          else if (reelKey && reelKey.startsWith('yt_')) platform = 'youtube';
+          else if (reelKey && reelKey.startsWith('tt_')) platform = 'tiktok';
+        }
 
         if (reelKey) {
           if (todaySeenReels[reelKey]) {
@@ -328,9 +409,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           } else {
             todaySeenReels[reelKey] = true;
             todayScrollCount += 1;
+            if (platform === 'instagram') todayInstagramScrollCount += 1;
+            else if (platform === 'youtube') todayYouTubeScrollCount += 1;
           }
         } else {
           todayScrollCount += 1;
+          if (platform === 'instagram') todayInstagramScrollCount += 1;
+          else if (platform === 'youtube') todayYouTubeScrollCount += 1;
         }
 
         const limitReached = dailyLimitEnabled && todayScrollCount >= dailyScrollLimit;
@@ -338,12 +423,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await chrome.storage.local.set({
           todayDate: todayStr,
           todayScrollCount,
+          todayInstagramScrollCount,
+          todayYouTubeScrollCount,
+          todayYouTubeSeconds,
           todaySeenReels
         });
 
         sendResponse({
           success: true,
           todayScrollCount,
+          todayInstagramScrollCount,
+          todayYouTubeScrollCount,
           dailyScrollLimit,
           dailyLimitEnabled,
           limitReached,
@@ -355,6 +445,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'dailyLimitEnabled',
           'dailyScrollLimit',
           'todayScrollCount',
+          'todayInstagramScrollCount',
+          'todayYouTubeScrollCount',
           'todayDate',
           'todaySeenReels'
         ]);
@@ -362,18 +454,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const dailyLimitEnabled = data.dailyLimitEnabled !== undefined ? data.dailyLimitEnabled : true;
         const dailyScrollLimit = typeof data.dailyScrollLimit === 'number' ? data.dailyScrollLimit : 100;
         let todayScrollCount = typeof data.todayScrollCount === 'number' ? data.todayScrollCount : 0;
+        let todayInstagramScrollCount = typeof data.todayInstagramScrollCount === 'number' ? data.todayInstagramScrollCount : 0;
+        let todayYouTubeScrollCount = typeof data.todayYouTubeScrollCount === 'number' ? data.todayYouTubeScrollCount : 0;
         let todaySeenReels = data.todaySeenReels || {};
 
         if (data.todayDate !== todayStr) {
           todayScrollCount = 0;
+          todayInstagramScrollCount = 0;
+          todayYouTubeScrollCount = 0;
           todaySeenReels = {};
-          await chrome.storage.local.set({ todayDate: todayStr, todayScrollCount: 0, todaySeenReels: {} });
+          await chrome.storage.local.set({
+            todayDate: todayStr,
+            todayScrollCount: 0,
+            todayInstagramScrollCount: 0,
+            todayYouTubeScrollCount: 0,
+            todaySeenReels: {}
+          });
         }
 
         const limitReached = dailyLimitEnabled && todayScrollCount >= dailyScrollLimit;
         sendResponse({
           success: true,
           todayScrollCount,
+          todayInstagramScrollCount,
+          todayYouTubeScrollCount,
           dailyScrollLimit,
           dailyLimitEnabled,
           todayDate: todayStr,
@@ -381,14 +485,101 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       } else if (message.action === 'resetTodayScrollCount') {
         const todayStr = getTodayDateString();
-        await chrome.storage.local.set({ todayDate: todayStr, todayScrollCount: 0, todaySeenReels: {} });
-        sendResponse({ success: true, todayScrollCount: 0 });
+        await chrome.storage.local.set({
+          todayDate: todayStr,
+          todayScrollCount: 0,
+          todayInstagramScrollCount: 0,
+          todayYouTubeScrollCount: 0,
+          todaySeenReels: {}
+        });
+        sendResponse({
+          success: true,
+          todayScrollCount: 0,
+          todayInstagramScrollCount: 0,
+          todayYouTubeScrollCount: 0
+        });
       } else if (message.action === 'extendDailyScrollLimit') {
         const amount = typeof message.amount === 'number' ? message.amount : 15;
         const data = await chrome.storage.local.get(['dailyScrollLimit']);
         const currentLimit = typeof data.dailyScrollLimit === 'number' ? data.dailyScrollLimit : 100;
         const newLimit = currentLimit + amount;
         await chrome.storage.local.set({ dailyScrollLimit: newLimit });
+        sendResponse({ success: true, newLimit });
+      } else if (message.action === 'logYouTubeTime') {
+        const todayStr = getTodayDateString();
+        const data = await chrome.storage.local.get([
+          'todayDate',
+          'todayYouTubeSeconds',
+          'youtubeTimeLimitEnabled',
+          'youtubeTimeLimitMinutes'
+        ]);
+
+        let todayYouTubeSeconds = typeof data.todayYouTubeSeconds === 'number' ? data.todayYouTubeSeconds : 0;
+        if (data.todayDate !== todayStr) {
+          todayYouTubeSeconds = 0;
+        }
+
+        const secondsToAdd = typeof message.seconds === 'number' && message.seconds > 0 ? message.seconds : 0;
+        todayYouTubeSeconds += secondsToAdd;
+
+        const youtubeTimeLimitEnabled = data.youtubeTimeLimitEnabled !== undefined ? data.youtubeTimeLimitEnabled : false;
+        const youtubeTimeLimitMinutes = typeof data.youtubeTimeLimitMinutes === 'number' ? data.youtubeTimeLimitMinutes : 30;
+        const limitReached = youtubeTimeLimitEnabled && todayYouTubeSeconds >= (youtubeTimeLimitMinutes * 60);
+
+        await chrome.storage.local.set({
+          todayDate: todayStr,
+          todayYouTubeSeconds
+        });
+
+        sendResponse({
+          success: true,
+          todayYouTubeSeconds,
+          youtubeTimeLimitMinutes,
+          youtubeTimeLimitEnabled,
+          limitReached
+        });
+      } else if (message.action === 'getYouTubeTimeData') {
+        const todayStr = getTodayDateString();
+        const data = await chrome.storage.local.get([
+          'todayDate',
+          'todayYouTubeSeconds',
+          'youtubeTimeLimitEnabled',
+          'youtubeTimeLimitMinutes'
+        ]);
+
+        let todayYouTubeSeconds = typeof data.todayYouTubeSeconds === 'number' ? data.todayYouTubeSeconds : 0;
+        if (data.todayDate !== todayStr) {
+          todayYouTubeSeconds = 0;
+          await chrome.storage.local.set({ todayDate: todayStr, todayYouTubeSeconds: 0 });
+        }
+
+        const youtubeTimeLimitEnabled = data.youtubeTimeLimitEnabled !== undefined ? data.youtubeTimeLimitEnabled : false;
+        const youtubeTimeLimitMinutes = typeof data.youtubeTimeLimitMinutes === 'number' ? data.youtubeTimeLimitMinutes : 30;
+        const limitReached = youtubeTimeLimitEnabled && todayYouTubeSeconds >= (youtubeTimeLimitMinutes * 60);
+
+        sendResponse({
+          success: true,
+          todayYouTubeSeconds,
+          youtubeTimeLimitMinutes,
+          youtubeTimeLimitEnabled,
+          limitReached
+        });
+      } else if (message.action === 'resetTodayYouTubeTime') {
+        const todayStr = getTodayDateString();
+        await chrome.storage.local.set({ todayDate: todayStr, todayYouTubeSeconds: 0 });
+        sendResponse({ success: true, todayYouTubeSeconds: 0 });
+      } else if (message.action === 'setYouTubeTimeLimit') {
+        const toSet = {};
+        if (typeof message.enabled === 'boolean') toSet.youtubeTimeLimitEnabled = message.enabled;
+        if (typeof message.minutes === 'number') toSet.youtubeTimeLimitMinutes = Math.max(1, message.minutes);
+        await chrome.storage.local.set(toSet);
+        sendResponse({ success: true, ...toSet });
+      } else if (message.action === 'extendYouTubeTimeLimit') {
+        const amount = typeof message.amount === 'number' ? message.amount : 15;
+        const data = await chrome.storage.local.get(['youtubeTimeLimitMinutes']);
+        const currentLimit = typeof data.youtubeTimeLimitMinutes === 'number' ? data.youtubeTimeLimitMinutes : 30;
+        const newLimit = currentLimit + amount;
+        await chrome.storage.local.set({ youtubeTimeLimitMinutes: newLimit });
         sendResponse({ success: true, newLimit });
       } else if (message.action === 'getSettings') {
         const settings = await chrome.storage.local.get(Object.keys(DEFAULT_SETTINGS));
