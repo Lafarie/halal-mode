@@ -42,13 +42,13 @@
       .replace(/'/g, '&#039;');
   }
 
-  // Helper: Verify that the current page/element is strictly a Reel (Instagram Reels, YouTube Shorts, TikTok)
-  // Absolutely excludes Instagram Stories, Direct Messages, profile pages, etc.
+  // Helper: Verify that the current page/element is strictly a Reel / short-form video (Instagram Reels & Feed Videos, YouTube Shorts, TikTok)
+  // Absolutely excludes Instagram Stories, Direct Messages, profile settings, etc.
   function isReelContext(video = null) {
     const host = window.location.hostname || '';
     const path = window.location.pathname || '';
 
-    // 1. Instagram: strictly reels only!
+    // 1. Instagram: Reels & Feed Video Posts (excluding Stories & DMs)
     if (host.includes('instagram.com')) {
       // Explicitly reject stories, direct messages, accounts/settings
       if (path.startsWith('/stories') || path.startsWith('/direct') || path.startsWith('/accounts')) {
@@ -66,15 +66,25 @@
             video.closest('div[aria-label*="stories"]')) {
           return false;
         }
+        // Any other video on Instagram (feed post, reels tab, direct reel, explore modal) is a reel/video context!
+        return true;
       }
-      // Instagram Reels paths
-      if (path.startsWith('/reels') || path.startsWith('/reel')) {
+      // When video is null: active on Home feed (/), Reels tab, direct Reel, post pages, and feed explore
+      if (
+        path === '/' ||
+        path === '' ||
+        path.startsWith('/feed') ||
+        path.startsWith('/reels') ||
+        path.startsWith('/reel') ||
+        path.startsWith('/p/') ||
+        path.startsWith('/explore')
+      ) {
         return true;
       }
       return false;
     }
 
-    // 2. YouTube: strictly Shorts only
+    // 2. YouTube: strictly Shorts only for reel scrolling/scanning
     if (host.includes('youtube.com')) {
       return path.startsWith('/shorts');
     }
@@ -216,6 +226,13 @@
 
   function isDailyLimitReached() {
     if (!settings.enabled || !settings.dailyLimitEnabled) return false;
+
+    // On YouTube, daily scroll limit ONLY applies to YouTube Shorts (/shorts/)!
+    // Regular YouTube videos (/watch, home, etc.) are tracked by time, not scroll count.
+    if (window.location.hostname.includes('youtube.com') && !window.location.pathname.startsWith('/shorts')) {
+      return false;
+    }
+
     const todayStr = getTodayDateString();
     if (settings.todayDate && settings.todayDate !== todayStr) {
       settings.todayScrollCount = 0;
@@ -571,7 +588,16 @@
 
     updateBodyClasses();
     const currentHref = window.location.href;
-    const currentKey = extractReelUrlKey(currentHref) || fallbackReelId;
+    let currentKey = extractReelUrlKey(currentHref) || fallbackReelId;
+
+    // On feeds where URL does not change per post (e.g. Instagram Home Feed /),
+    // resolve reel key from active/visible video element!
+    if (!currentKey) {
+      const activeVid = currentActiveVideo || getActiveVideo();
+      if (activeVid) {
+        currentKey = getReelIdentifier(activeVid);
+      }
+    }
 
     if (!currentKey) return;
 
@@ -599,7 +625,7 @@
           settings.todayScrollCount = resp.todayScrollCount;
           settings.dailyScrollLimit = resp.dailyScrollLimit;
           settings.dailyLimitEnabled = resp.dailyLimitEnabled;
-          if (resp.limitReached) {
+          if (resp.limitReached && isDailyLimitReached()) {
             pauseAllVideos();
             showDailyLimitCurtain();
           }
@@ -637,8 +663,8 @@
 
     let reelId = null;
 
-    // Instagram: Check reel container for link to /reel/ or /p/
-    const container = findVideoContainer(video) || video.closest('article') || video.parentElement;
+    // Instagram: Check article or container for link to /reel/ or /p/
+    const container = video.closest('article') || video.closest('div[role="presentation"]') || findVideoContainer(video) || video.parentElement;
     if (container) {
       const link = container.querySelector('a[href*="/reel/"], a[href*="/reels/"], a[href*="/p/"]');
       if (link && link.getAttribute('href')) {
@@ -678,16 +704,24 @@
       }
     }
 
-    // Fallback: stable media source path
+    // Fallback: stable media source path with platform prefix
     if (!reelId && (video.currentSrc || video.src)) {
       try {
         const u = new URL(video.currentSrc || video.src);
         const parts = u.pathname.split('/').filter(Boolean);
         const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
         if (lastPart && lastPart.length >= 6) {
-          reelId = `vid_${lastPart.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 30)}`;
+          const host = window.location.hostname || '';
+          const prefix = host.includes('instagram.com') ? 'ig_' : (host.includes('youtube.com') ? 'yt_' : 'vid_');
+          reelId = `${prefix}${lastPart.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 30)}`;
         }
       } catch (e) {}
+    }
+
+    // Instagram feed session ID fallback
+    if (!reelId && window.location.hostname.includes('instagram.com')) {
+      if (!window._halalIgCounter) window._halalIgCounter = 1;
+      reelId = `ig_feed_${Date.now().toString(36)}_${window._halalIgCounter++}`;
     }
 
     if (reelId) {
@@ -2044,6 +2078,26 @@
     // Navigation listeners for SPA URL changes
     window.addEventListener('popstate', () => checkUrlForReelNavigation(), true);
     window.addEventListener('hashchange', () => checkUrlForReelNavigation(), true);
+
+    // Scroll listener for feed scrolling (catches newly scrolled-into-view reels on Instagram Home Feed)
+    let scrollDebounce = null;
+    window.addEventListener('scroll', () => {
+      if (!settings.enabled || document.hidden) return;
+      if (scrollDebounce) return;
+      scrollDebounce = setTimeout(() => {
+        scrollDebounce = null;
+        if (!settings.enabled || document.hidden || !isReelContext()) return;
+        const activeVid = getActiveVideo();
+        if (activeVid) {
+          if (activeVid !== currentActiveVideo) {
+            onNewVideoActive(activeVid);
+          } else {
+            const reelId = getReelIdentifier(activeVid);
+            checkUrlForReelNavigation(reelId);
+          }
+        }
+      }, 150);
+    }, { passive: true });
 
     // Lightweight 250ms periodic URL check (catches internal pushState/replaceState instantly)
     setInterval(checkUrlForReelNavigation, 250);

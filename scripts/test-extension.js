@@ -109,11 +109,11 @@ async function runTests() {
   test('Instagram Direct Messages (/direct/t/123) is REJECTED', () => {
     assert.strictEqual(createIsReelContextTester('https://www.instagram.com/direct/t/123456789/'), false);
   });
-  test('Instagram Main Feed (/) is REJECTED for reels logic', () => {
-    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/'), false);
+  test('Instagram Main Feed (/) is ACCEPTED for feed reels', () => {
+    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/'), true);
   });
-  test('Instagram Explore (/explore/) is REJECTED', () => {
-    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/explore/'), false);
+  test('Instagram Explore (/explore/) is ACCEPTED for reel browsing', () => {
+    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/explore/'), true);
   });
   test('Instagram Reels tab (/reels/) is ACCEPTED', () => {
     assert.strictEqual(createIsReelContextTester('https://www.instagram.com/reels/'), true);
@@ -124,10 +124,13 @@ async function runTests() {
   test('Instagram Reel direct (/reel/DA87c9Xv9yO/) is ACCEPTED', () => {
     assert.strictEqual(createIsReelContextTester('https://www.instagram.com/reel/DA87c9Xv9yO/'), true);
   });
+  test('Instagram Feed Post (/p/DA87c9Xv9yO/) is ACCEPTED', () => {
+    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/p/DA87c9Xv9yO/'), true);
+  });
   test('YouTube Shorts (/shorts/abc123xyz) is ACCEPTED', () => {
     assert.strictEqual(createIsReelContextTester('https://www.youtube.com/shorts/abc123xyz'), true);
   });
-  test('YouTube Standard Video (/watch?v=123) is REJECTED', () => {
+  test('YouTube Standard Video (/watch?v=123) is REJECTED from shorts scroll scan', () => {
     assert.strictEqual(createIsReelContextTester('https://www.youtube.com/watch?v=abc123xyz'), false);
   });
   test('TikTok Video (/video/71829384) is ACCEPTED', () => {
@@ -138,6 +141,12 @@ async function runTests() {
       closest: (sel) => sel.includes('region') || sel.includes('Story')
     };
     assert.strictEqual(createIsReelContextTester('https://www.instagram.com/p/DA87c9Xv9yO/', mockStoryVideo), false);
+  });
+  test('Instagram video on Home Feed is ACCEPTED', () => {
+    const mockFeedVideo = {
+      closest: (sel) => false
+    };
+    assert.strictEqual(createIsReelContextTester('https://www.instagram.com/', mockFeedVideo), true);
   });
 
   // ------------------------------------------------------------------
@@ -584,6 +593,70 @@ async function runTests() {
     const res = simulateLogYouTubeTime({ seconds: 0 });
     assert.strictEqual(res.todayYouTubeSeconds, 0);
     assert.strictEqual(res.limitReached, false);
+  });
+
+  // ------------------------------------------------------------------
+  // 9. Daily Scroll Limit Enforcement (YouTube Shorts vs Regular YouTube & Instagram Home)
+  // ------------------------------------------------------------------
+  console.log('\n🛑 9. Daily Scroll Limit Enforcement (YouTube Shorts vs Regular YouTube):');
+  const isDailyLimitMatch = contentCode.match(/function isDailyLimitReached\(\)\s*\{([\s\S]*?)\n  \}/);
+  assert(isDailyLimitMatch, 'isDailyLimitReached found in content.js');
+
+  function createDailyLimitTester(urlStr, settingsObj) {
+    const u = new URL(urlStr);
+    const mockWindow = {
+      location: {
+        hostname: u.hostname,
+        pathname: u.pathname,
+        href: urlStr
+      }
+    };
+    const fn = new Function('window', 'settings', 'getTodayDateString', isDailyLimitMatch[1]);
+    return fn(mockWindow, settingsObj, () => '2026-09-06');
+  }
+
+  test('Daily scroll limit DOES NOT block regular YouTube video (/watch)', () => {
+    const settings = {
+      enabled: true,
+      dailyLimitEnabled: true,
+      dailyScrollLimit: 10,
+      todayScrollCount: 15, // limit exceeded
+      todayDate: '2026-09-06'
+    };
+    assert.strictEqual(createDailyLimitTester('https://www.youtube.com/watch?v=dQw4w9WgXcQ', settings), false);
+  });
+
+  test('Daily scroll limit DOES NOT block YouTube home page (/)', () => {
+    const settings = {
+      enabled: true,
+      dailyLimitEnabled: true,
+      dailyScrollLimit: 10,
+      todayScrollCount: 15,
+      todayDate: '2026-09-06'
+    };
+    assert.strictEqual(createDailyLimitTester('https://www.youtube.com/', settings), false);
+  });
+
+  test('Daily scroll limit DOES block YouTube Shorts (/shorts/...) when limit reached', () => {
+    const settings = {
+      enabled: true,
+      dailyLimitEnabled: true,
+      dailyScrollLimit: 10,
+      todayScrollCount: 15,
+      todayDate: '2026-09-06'
+    };
+    assert.strictEqual(createDailyLimitTester('https://www.youtube.com/shorts/abc123xyz', settings), true);
+  });
+
+  test('Daily scroll limit DOES block Instagram Home Feed when limit reached', () => {
+    const settings = {
+      enabled: true,
+      dailyLimitEnabled: true,
+      dailyScrollLimit: 10,
+      todayScrollCount: 15,
+      todayDate: '2026-09-06'
+    };
+    assert.strictEqual(createDailyLimitTester('https://www.instagram.com/', settings), true);
   });
 
   console.log('\n====================================================');
